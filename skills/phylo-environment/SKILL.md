@@ -47,7 +47,7 @@ For each missing tool:
 | `phylo-assemble` | GetOrganelle, NOVOPlasty, HybPiper, BWA, SAMtools, BLAST+, Trinity *(load only what the chosen assembly strategy needs)* |
 | `phylo-alignment` | MAFFT *(primary)*; MUSCLE *(alternative)* |
 | `phylo-model-selection` | IQ-TREE 2 *(includes ModelFinder)*; ModelTest-NG *(alternative)* |
-| `phylo-tree-inference` | IQ-TREE 2, RAxML-NG *(alternative)*, MrBayes *(Bayesian)*, BEAST2 *(divergence time)* |
+| `phylo-tree-inference` | IQ-TREE 2, ASTER (wASTRAL / ASTRAL-Pro2), RAxML-NG *(alternative)*, MrBayes *(Bayesian)*, BEAST2 *(divergence time)* |
 | `phylo-visualization` | R ≥ 4.0, `ape`, `phytools`, `ggtree`, `ggplot2` |
 
 Only check tools needed for the planned modules — do not install the full list upfront unless requested.

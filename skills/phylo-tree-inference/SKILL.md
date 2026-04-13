@@ -1,6 +1,6 @@
 ---
 name: phylo-tree-inference
-description: Use after model selection is complete. Infers phylogenetic trees using maximum likelihood (IQ-TREE, RAxML-NG) or Bayesian methods (MrBayes, BEAST2). Use when the researcher needs to run tree inference, choose between ML and Bayesian approaches, assess branch support, evaluate convergence, or estimate divergence times. BEAST2 divergence time runs require human approval of calibration points before execution.
+description: Use after model selection is complete. Infers phylogenetic trees using maximum likelihood (IQ-TREE, RAxML-NG), coalescent summary methods (ASTER: wASTRAL or ASTRAL-Pro2), or Bayesian methods (MrBayes, BEAST2). Use when the researcher needs to run tree inference, choose between ML and Bayesian or coalescent approaches, assess branch support, evaluate convergence, or estimate divergence times. BEAST2 divergence time runs require human approval of calibration points before execution.
 ---
 
 # Inferring Phylogenetic Trees
@@ -71,7 +71,84 @@ iqtree2 -s aligned.fasta -m GTR+F+I+G4 -B 1000 -T AUTO \
 
 Report both UFBoot and SH-aLRT when both are run. A node is well-supported when both exceed thresholds.
 
-## Step 3b — RAxML-NG (ML, alternative)
+## Step 3b — ASTER coalescent summary (after IQ-TREE gene trees)
+
+After ML gene trees are inferred, run ASTER to produce a species tree that accounts for incomplete lineage sorting (ILS). ASTER is the recommended post-ML step for multi-locus datasets.
+
+### Tool selection — detect automatically from dataset
+
+```dot
+digraph aster_choice {
+    "Multi-copy genes or paralogs?" [shape=diamond];
+    "Gene trees have branch lengths?" [shape=diamond];
+    "ASTRAL-Pro2" [shape=box];
+    "wASTRAL (weighted)" [shape=box];
+    "ASTRAL (standard)" [shape=box];
+
+    "Multi-copy genes or paralogs?" -> "ASTRAL-Pro2" [label="yes"];
+    "Multi-copy genes or paralogs?" -> "Gene trees have branch lengths?" [label="no"];
+    "Gene trees have branch lengths?" -> "wASTRAL (weighted)" [label="yes (default for IQ-TREE output)"];
+    "Gene trees have branch lengths?" -> "ASTRAL (standard)" [label="no"];
+}
+```
+
+**How to detect:**
+- **Paralogs / multi-copy:** check if HybPiper or assembly produced multiple copies per locus per sample; or if the research design involves gene families rather than single-copy markers
+- **Branch lengths present:** IQ-TREE `.treefile` always includes branch lengths → use wASTRAL by default for IQ-TREE output
+- **No branch lengths:** trees from some tools or collapsed topologies → use standard ASTRAL
+
+### wASTRAL (weighted — default for IQ-TREE gene trees)
+
+```bash
+# Collect all per-gene ML trees into one file
+cat output/gene_trees/*.treefile > all_gene_trees.txt
+
+# Run wASTRAL (uses branch lengths and bootstrap support)
+wastral --input all_gene_trees.txt --output output/wastral_species_tree.nwk \
+  --thread 8
+
+# With bootstrap weighting explicitly enabled
+wastral --input all_gene_trees.txt --output output/wastral_species_tree.nwk \
+  -u 2 --thread 8
+# -u 2: use both branch lengths and local posterior for weighting
+```
+
+### ASTRAL-Pro2 (multi-copy genes / paralogs)
+
+```bash
+# Input: gene trees that may have multiple copies per taxon
+astral-pro --input all_gene_trees.txt \
+  --output output/astral_pro_species_tree.nwk \
+  --thread 8
+```
+
+### Per-gene tree requirement
+
+ASTER requires individual gene trees — one tree per marker/locus. If only a concatenated supermatrix tree was inferred, run IQ-TREE per gene first:
+
+```bash
+for marker in data/aligned/*_aligned.fasta; do
+  base=$(basename $marker _aligned.fasta)
+  iqtree2 -s $marker -m TEST -B 1000 --alrt 1000 \
+    -T AUTO --prefix output/gene_trees/$base
+done
+cat output/gene_trees/*.treefile > all_gene_trees.txt
+```
+
+### Interpreting ASTER output
+
+- Local posterior support values on branches (range 0–1; ≥0.95 considered well-supported)
+- Compare species tree topology to concatenation tree — discordance indicates potential ILS
+- Concordance factors (optional, computed in IQ-TREE): quantify how many gene trees support each branch
+
+```bash
+# Concordance factors — run after species tree is available
+iqtree2 -t output/wastral_species_tree.nwk \
+  --gcf all_gene_trees.txt -p concatenated.fasta \
+  --scf 100 --prefix concordance
+```
+
+## Step 3c — RAxML-NG (ML, alternative)
 
 ```bash
 # Model test + ML inference + bootstrap
@@ -170,6 +247,8 @@ Flag any unexpected topology to the researcher with a specific question — do n
 |-------|-----------|-------------------|
 | UFBoot support | Key nodes ≥95 | Check alignment quality; route to `phylo-debug` |
 | SH-aLRT support | Key nodes ≥80 | As above |
+| ASTER local posterior | Key nodes ≥0.95 | Check gene tree quality; low support may indicate ILS |
+| ASTER tool choice | Matches dataset (paralogs → Pro2; branch lengths → wASTRAL) | Re-run with correct tool |
 | Posterior probability | Key nodes ≥0.95 | Extend MCMC run |
 | MrBayes ASDSF | <0.01 | Extend `ngen`; route to `phylo-debug` |
 | BEAST2 ESS | All parameters ≥200 | Extend chain; do not report |
@@ -186,7 +265,9 @@ Date: YYYY-MM-DD
 Plan: [planA / planB / ...]
 
 ## Method
-- Tool: IQ-TREE [version] / RAxML-NG / MrBayes / BEAST2
+- ML tool: IQ-TREE [version] / RAxML-NG
+- Coalescent tool: wASTRAL / ASTRAL-Pro2 / ASTRAL (state which and why)
+- Bayesian tool (if used): MrBayes / BEAST2
 - Justification for method choice
 
 ## Configuration
@@ -210,8 +291,15 @@ Plan: [planA / planB / ...]
 ## Topology Notes
 [Well-supported clades recovered, unexpected results, long branches]
 
+## ASTER Results (if run)
+- Tool used: wASTRAL / ASTRAL-Pro2 / ASTRAL — detection rationale
+- Number of gene trees input
+- Species tree local posterior support summary
+- Discordance vs. concatenation tree (notable differences)
+- Concordance factors (if computed)
+
 ## Output Files
-[Tree file paths — .treefile, .contree, .mcc.tree, etc.]
+[Tree file paths — .treefile, .contree, wastral_species_tree.nwk, .mcc.tree, etc.]
 
 ## Software Versions
 | Tool | Version | Source | Install date |
@@ -226,6 +314,9 @@ phylo-visualization
 | Mistake | Fix |
 |---------|-----|
 | Treating UFBoot ≥70 as reliable (like standard bootstrap) | UFBoot threshold is ≥95, not ≥70; the scales are different |
+| Running wASTRAL on multi-copy gene data | Detect paralogs first — use ASTRAL-Pro2 if multiple copies per locus exist |
+| Skipping ASTER after ML inference on multi-locus data | Concatenation alone ignores ILS; always run ASTER as a complement |
+| Using standard ASTRAL when IQ-TREE gene trees are available | IQ-TREE output has branch lengths → wASTRAL is more appropriate by default |
 | Running BEAST2 without human calibration approval | This is a hard gate — stop and present calibrations first, always |
 | Accepting Bayesian results without checking convergence | ESS and trace plots are mandatory, not optional |
 | Extending a non-converging MrBayes run indefinitely | Check for model misspecification or problematic taxa first |

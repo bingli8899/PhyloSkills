@@ -91,18 +91,78 @@ All downstream module reports for each plan go into its subdirectory.
 
 **Do not download anything until at least one plan is approved.**
 
-### Step 6 — Download approved data
+### Step 6 — Estimate storage and choose download mode
 
-**Assembled sequences from GenBank:**
+Before downloading any SRA data, compare estimated dataset size against available server storage.
+
+**Check available storage:**
 ```bash
-# Fetch by accession list
-efetch -db nuccore -id <accession_list> -format fasta > sequences.fasta
+df -h .        # available space in current working directory
+df -h data/    # or wherever data will be stored
 ```
 
-**SRA raw reads:**
+**Estimate SRA dataset sizes from metadata (before downloading):**
 ```bash
-prefetch <SRR_ID> -O data/raw/
-fasterq-dump data/raw/<SRR_ID>/ -O data/raw/ --split-files
+# Get file size for each SRA run from metadata
+esearch -db sra -query "<SRR_ID>" | efetch -format runinfo \
+  | cut -d',' -f7,10,11   # size_MB, LibraryStrategy, ScientificName
+
+# Or use SRA toolkit
+vdb-dump --info <SRR_ID> | grep -i "size"
+```
+
+**Decision — apply per plan:**
+
+| Condition | Mode | Description |
+|-----------|------|-------------|
+| Available storage > estimated raw data × 1.5 | **Bulk mode** | Download all → assemble all → keep assemblies |
+| Available storage ≤ estimated raw data × 1.5 | **Streaming mode** | Download one sample → assemble → keep assembly → delete raw → next |
+
+The 1.5× buffer accounts for intermediate files created during assembly (GetOrganelle, HybPiper, etc. produce large temporary directories).
+
+**Bulk mode** (storage is sufficient):
+```bash
+# Download all SRA runs first
+for SRR_ID in $(cat sra_list.txt); do
+  prefetch $SRR_ID -O data/raw/
+  fasterq-dump data/raw/$SRR_ID/ -O data/raw/ --split-files
+done
+# Then hand off to phylo-assemble
+```
+
+**Streaming mode** (storage is limited — download → assemble → delete raw, one sample at a time):
+```bash
+for SRR_ID in $(cat sra_list.txt); do
+  echo "Processing $SRR_ID..."
+
+  # 1. Download
+  prefetch $SRR_ID -O data/raw/
+  fasterq-dump data/raw/$SRR_ID/ -O data/raw/ --split-files
+
+  # 2. Assemble immediately (adapt command to assembly strategy)
+  get_organelle_from_reads.py \
+    -1 data/raw/${SRR_ID}_1.fastq -2 data/raw/${SRR_ID}_2.fastq \
+    -F embplant_pt -o data/assembled/${SRR_ID}/ -t 8
+
+  # 3. Verify assembly output exists before deleting raw data
+  if [ -f "data/assembled/${SRR_ID}/*.fasta" ]; then
+    rm -rf data/raw/$SRR_ID/
+    rm -f data/raw/${SRR_ID}*.fastq
+    echo "$SRR_ID: assembly complete, raw reads removed"
+  else
+    echo "$SRR_ID: assembly FAILED — raw reads retained for debugging"
+  fi
+
+  # 4. Log storage after each sample
+  df -h . | tail -1
+done
+```
+
+**Critical:** In streaming mode, only delete raw reads after confirming the assembly output file exists and is non-empty. Never delete before verifying. Log each deletion in the report.
+
+**Assembled sequences from GenBank** (not affected by storage mode — these are small):
+```bash
+efetch -db nuccore -id <accession_list> -format fasta > sequences.fasta
 ```
 
 **File naming convention — enforce strictly:**
@@ -151,6 +211,15 @@ Date: YYYY-MM-DD
 ## Inclusion / Exclusion Decisions
 [Sequences included or excluded with reasoning]
 
+## Storage Assessment
+- Available storage at start: [X GB]
+- Estimated raw SRA data size: [X GB]
+- Download mode selected: bulk / streaming — justification
+
+## Streaming Mode Log (if applicable)
+| SRR ID | Assembly output | Raw reads deleted | Notes |
+|--------|----------------|-----------------|-------|
+
 ## Data Quality Notes
 [Suspect sequences, misidentified taxa, truncated records flagged]
 
@@ -189,3 +258,6 @@ One row per accession/run. Spans all plans — include a Plan column if multiple
 | Treating missing data as a binary pass/fail | Estimate % per plan — some missing data is acceptable and expected |
 | Downloading SRA reads without checking library strategy | Confirm WGS/genome skimming vs. amplicon vs. RNA-seq before routing to phylo-assemble |
 | Forgetting to record Entrez Direct and SRA Toolkit versions | Run `edirect -version` and `fasterq-dump --version`; log both in report |
+| Skipping storage estimation before bulk SRA download | Large WGS datasets can exceed hundreds of GB; always estimate first |
+| Deleting raw reads before verifying assembly output | Check file exists and is non-empty before `rm`; a failed assembly with deleted reads cannot be recovered |
+| Using bulk mode when storage is borderline | Apply the 1.5× buffer conservatively; streaming mode is safer and produces the same result |
