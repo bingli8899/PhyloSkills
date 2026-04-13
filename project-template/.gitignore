@@ -1,0 +1,65 @@
+# Raw sequence data (large, re-downloadable)
+data/raw/
+data/sra/
+data/reads/
+
+# Assembled plastomes and intermediate files
+data/plastomes/
+data/assembled/
+
+# Results (reproducible from scripts; commit summaries, not raw outputs)
+results/trees/
+results/alignments/
+results/beast2/
+results/mrbayes/
+results/getorganelle/
+
+# Keep provenance logs (small, important for methods)
+!results/provenance/
+
+# Reports — commit only final versions
+reports/draft_*
+reports/figure_captions_draft_*
+
+# Common bioinformatics temp files
+*.bam
+*.bai
+*.sam
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.log
+*.ckp.gz
+*.run
+*.lck
+
+# IQ-TREE temporaries
+*.iqtree
+*.mldist
+*.splits.nex
+*.uniqueseq.phy
+*.ckp.gz
+
+# BEAST2 log files (keep .trees if <50MB, otherwise gitignore)
+*.log
+*.op
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# R
+.Rhistory
+.Rdata
+*.Rproj.user/
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+*.swp
