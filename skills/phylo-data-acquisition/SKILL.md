@@ -248,6 +248,30 @@ Curcuma longa       & SRR9876543 & SRA   & WGS       & —    & 4.2M reads & 202
 
 One row per accession/run. Spans all plans — include a Plan column if multiple plans were run.
 
+## Scripts
+
+Pre-built scripts for this module are in `skills/phylo-data-acquisition/scripts/`. Load when needed:
+
+| Script | Purpose |
+|--------|---------|
+| `download_genbank.sh` | Survey GenBank and download sequences per marker; enforces `Genus_species_accession_marker.fasta` naming |
+| `download_sra.sh` | Storage-aware SRA download; auto-selects bulk vs. streaming mode; calls assembly script in streaming mode |
+
+Usage examples:
+```bash
+# Survey only (no download)
+bash skills/phylo-data-acquisition/scripts/download_genbank.sh \
+  -g "Zingiberaceae" -m "matK,rbcL,ITS" -o data/genbank -s
+
+# Download GenBank sequences (≤300 per marker)
+bash skills/phylo-data-acquisition/scripts/download_genbank.sh \
+  -g "Zingiberaceae" -m "matK,rbcL,ITS,psbA" -o data/genbank -n 300
+
+# SRA download (auto mode — detects bulk vs. streaming)
+bash skills/phylo-data-acquisition/scripts/download_sra.sh \
+  -l sra_list.txt -o data/raw
+```
+
 ## Common Mistakes
 
 | Mistake | Fix |

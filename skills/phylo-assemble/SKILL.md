@@ -183,6 +183,47 @@ Plan: [planA / planB / ...]
 phylo-alignment
 ```
 
+## Scripts
+
+Pre-built scripts for this module are in `skills/phylo-assemble/scripts/`. Load when needed:
+
+| Script | Purpose |
+|--------|---------|
+| `assemble_plastome_getorganelle.sh` | De novo plastome assembly with GetOrganelle; QC checks assembly length |
+| `assemble_plastome_bwa.sh` | Reference-guided plastome assembly: BWA → SAMtools → BCFtools consensus; strict or majority mode |
+| `run_hybpiper.sh` | Full HybPiper v2 pipeline: assemble → stats → retrieve_sequences → optional paralog_retriever |
+| `annotate_plastome.sh` | Plastome annotation with PLANN or chloe (auto-detected); configurable paths |
+| `extract_cds.py` | Extract CDS from GenBank annotations; handles multi-exon genes; outputs per-gene FASTA + partition |
+
+Utility scripts (in `skills/utils/`):
+
+| Script | Purpose |
+|--------|---------|
+| `change_header_name.py` | Rename FASTA headers from a two-column TSV mapping |
+| `remove_N_fasta.py` | Remove sequences with excessive N or gap characters |
+| `revise_hybpiper_sequences.py` | Post-process HybPiper output: rename headers, filter short seqs, flag low-recovery samples |
+
+Usage examples:
+```bash
+# GetOrganelle plastome assembly (land plant)
+bash skills/phylo-assemble/scripts/assemble_plastome_getorganelle.sh \
+  -1 SRR123_1.fastq -2 SRR123_2.fastq -o assemblies -s Zingiber_officinale
+
+# BWA-based assembly (reference-guided)
+bash skills/phylo-assemble/scripts/assemble_plastome_bwa.sh \
+  -1 SRR123_1.fastq -2 SRR123_2.fastq \
+  -r reference_plastome.fasta -o assemblies -s Zingiber_officinale -c strict
+
+# HybPiper pipeline
+bash skills/phylo-assemble/scripts/run_hybpiper.sh \
+  -r Angiosperms353_targetfile.fasta -s sample_list.txt \
+  -d data/raw -o hybpiper_output
+
+# Extract CDS from annotations
+python skills/phylo-assemble/scripts/extract_cds.py \
+  --input annotations/ --output data/cds/ --concatenate
+```
+
 ## Common Mistakes
 
 | Mistake | Fix |

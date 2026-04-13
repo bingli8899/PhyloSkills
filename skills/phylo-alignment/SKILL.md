@@ -41,6 +41,7 @@ mafft --auto --thread 8 input.fasta > aligned.fasta
 # Protein
 mafft --auto --amino --thread 4 input.fasta > aligned.fasta
 ```
+Note that the server could have different number of processors to be used. Need to check the number of processors first and then adjust `--thread` accordingly.
 
 **Alternative — MUSCLE** (use if MAFFT produces poor results on a specific marker):
 ```bash
@@ -174,6 +175,26 @@ Plan: [planA / planB / ...]
 
 ## Next Module
 phylo-model-selection
+```
+
+## Scripts
+
+Pre-built scripts for this module are in `skills/phylo-alignment/scripts/`. Load when needed:
+
+| Script | Purpose |
+|--------|---------|
+| `align_markers.sh` | MAFFT alignment per marker with strategy selection; optional trimAl; optional AMAS concatenation |
+| `analyze_alignment.py` | Per-marker and per-sequence diagnostics: gap%, parsimony-informative sites, outlier detection |
+
+Usage examples:
+```bash
+# Align all markers in a directory, trim with trimAl, then concatenate
+bash skills/phylo-alignment/scripts/align_markers.sh \
+  -i data/cds/ -o data/aligned/ -s linsi -T -c
+
+# Analyze alignment quality and flag problems
+python skills/phylo-alignment/scripts/analyze_alignment.py \
+  --input data/aligned/ --output alignment_diagnostics.tsv
 ```
 
 ## Common Mistakes
