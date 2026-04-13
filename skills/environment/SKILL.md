@@ -1,5 +1,5 @@
 ---
-name: phylo-environment
+name: environment
 description: Use when starting a phylogenetic project, before running any analysis module, or when a module reports a missing or incompatible tool. Checks, installs, and versions all third-party software required for the pipeline. Use when the researcher needs to set up tools, verify an existing environment, or when any downstream module cannot find a required executable.
 ---
 
@@ -11,7 +11,7 @@ Verify, install, and document all pipeline software before analysis begins. No m
 
 ## When to Use
 
-- Project start — before `phylo-research-design` or any other module
+- Project start — before `research-design` or any other skill
 - Any module reports a missing or unrecognized executable
 - Researcher switches machines or environments
 - A tool needs upgrading mid-project
@@ -43,12 +43,13 @@ For each missing tool:
 
 | Module | Tools |
 |--------|-------|
-| `phylo-data-acquisition` | NCBI Entrez Direct (`edirect`), SRA Toolkit (`prefetch`, `fasterq-dump`) |
-| `phylo-assemble` | GetOrganelle, NOVOPlasty, HybPiper, BWA, SAMtools, BLAST+, Trinity *(load only what the chosen assembly strategy needs)* |
-| `phylo-alignment` | MAFFT *(primary)*; MUSCLE *(alternative)* |
-| `phylo-model-selection` | IQ-TREE 2 *(includes ModelFinder)*; ModelTest-NG *(alternative)* |
-| `phylo-tree-inference` | IQ-TREE 2, ASTER (wASTRAL / ASTRAL-Pro2), RAxML-NG *(alternative)*, MrBayes *(Bayesian)*, BEAST2 *(divergence time)* |
-| `phylo-visualization` | R ≥ 4.0, `ape`, `phytools`, `ggtree`, `ggplot2` |
+| `data-acquisition` | NCBI Entrez Direct (`edirect`), SRA Toolkit (`prefetch`, `fasterq-dump`) |
+| `assembly` | GetOrganelle, NOVOPlasty, HybPiper, BWA, SAMtools, BLAST+, Trinity *(load only what the chosen assembly strategy needs)* |
+| `alignment` | MAFFT *(primary)*; MUSCLE *(alternative)*; trimAl; AMAS |
+| `model-selection` | IQ-TREE 2 *(includes ModelFinder)*; ModelTest-NG *(alternative)* |
+| `tree-inference` | IQ-TREE 2, ASTER (wASTRAL / ASTRAL-Pro3), RAxML-NG *(alternative)*, MrBayes *(Bayesian)*, BEAST2 *(divergence time)* |
+| `visualization` | R ≥ 4.0, `ape`, `phytools`, `ggtree`, `ggplot2` |
+| `manuscript` | Python ≥ 3.8 *(methods_gen.py)*; Biopython *(for log parsing)* |
 
 Only check tools needed for the planned modules — do not install the full list upfront unless requested.
 

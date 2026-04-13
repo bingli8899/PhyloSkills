@@ -1,5 +1,5 @@
 ---
-name: phylo-visualization
+name: visualization
 description: Use after tree inference is complete. Produces annotated, publication-quality phylogenetic tree figures using R (ggtree, ape, phytools, ggplot2). Use when the researcher needs to plot a phylogenetic tree with support values, scale bars, clade labels, tip annotations, or divergence time axes. All visualization is R-based.
 ---
 
@@ -200,7 +200,7 @@ Standard journal figure widths: single column ≈ 85 mm, double column ≈ 170�
 | Scale bar unit matches tree type (substitutions vs. time) | ML tree → substitutions/site; BEAST2 → time units |
 | HPD bars visible and correctly placed (BEAST2) | Check `geom_range` column name matches `.beast` object slots |
 
-On any failure → route to `phylo-debug`.
+On any failure → route to `debug`.
 
 ## Report
 

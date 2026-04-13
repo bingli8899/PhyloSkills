@@ -1,5 +1,5 @@
 ---
-name: phylo-alignment
+name: alignment
 description: Use after assembled or downloaded sequences are organized and ready for alignment. Selects alignment strategy based on dataset size and sequence type, runs per-marker alignments, optionally trims, and guides the concatenation vs. coalescent decision for multi-locus datasets. Use when raw FASTA files need to be aligned before model selection and tree inference.
 ---
 
@@ -105,7 +105,7 @@ python AMAS.py concat -i marker1.fasta marker2.fasta marker3.fasta \
 - Gene trees show substantial discordance
 - All markers have good taxon coverage
 
-Coalescent requires individual gene trees first (run `phylo-tree-inference` per marker, then summarize with ASTRAL). Note this in the report and coordinate with the researcher.
+Coalescent requires individual gene trees first (run `tree-inference` per marker, then summarize with ASTRAL). Note this in the report and coordinate with the researcher.
 
 **When uncertain:** default to concatenation, note the caveat, revisit after seeing the gene trees.
 
@@ -113,13 +113,13 @@ Coalescent requires individual gene trees first (run `phylo-tree-inference` per 
 
 | Check | Threshold | Action on failure |
 |-------|-----------|-------------------|
-| Alignment length | Within expected range for marker | Inspect for misaligned seqs; route to `phylo-debug` |
+| Alignment length | Within expected range for marker | Inspect for misaligned seqs; route to `debug` |
 | Mean gap % per column | <30% after trimming | Re-trim or remove partial sequences |
 | Sequences removed during QC | Document every removal | Note taxon, reason, and marker in report |
 | Concatenated matrix completeness | Note overall missing data % | Inform researcher; >50% missing data warrants discussion |
 | Parsimony-informative sites | >10% of alignment length | Flag if very low — may indicate insufficient variation |
 
-On any failure → route to `phylo-debug`.
+On any failure → route to `debug`.
 
 ## Step 7 — Organize outputs
 
@@ -174,12 +174,12 @@ Plan: [planA / planB / ...]
 |------|---------|--------|-------------|
 
 ## Next Module
-phylo-model-selection
+model-selection
 ```
 
 ## Scripts
 
-Pre-built scripts for this module are in `skills/phylo-alignment/scripts/`. Load when needed:
+Pre-built scripts for this module are in `scripts/alignment/`. Load when needed:
 
 | Script | Purpose |
 |--------|---------|
@@ -189,11 +189,11 @@ Pre-built scripts for this module are in `skills/phylo-alignment/scripts/`. Load
 Usage examples:
 ```bash
 # Align all markers in a directory, trim with trimAl, then concatenate
-bash skills/phylo-alignment/scripts/align_markers.sh \
+bash scripts/alignment/align_markers.sh \
   -i data/cds/ -o data/aligned/ -s linsi -T -c
 
 # Analyze alignment quality and flag problems
-python skills/phylo-alignment/scripts/analyze_alignment.py \
+python scripts/alignment/analyze_alignment.py \
   --input data/aligned/ --output alignment_diagnostics.tsv
 ```
 

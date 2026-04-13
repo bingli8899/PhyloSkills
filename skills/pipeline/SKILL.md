@@ -1,5 +1,5 @@
 ---
-name: phylogenetic-analysis
+name: pipeline
 description: Use when a researcher wants to start, continue, or get help navigating a phylogenetic analysis of any scope or organism group. Routes to the correct pipeline module based on existing checkpoint reports. Use as the entry point for any phylogenetic project — from a new study with no data to resuming mid-pipeline after a previous session.
 ---
 
@@ -12,15 +12,16 @@ Entry point and coordinator for the full phylogenetic analysis pipeline. Reads c
 ## Pipeline modules
 
 ```
-phylo-environment       → software setup and version management
-phylo-research-design   → literature review, question definition, study design
-phylo-data-acquisition  → GenBank/SRA survey, sampling plans, download
-phylo-assemble          → plastome/marker assembly from raw SRA reads
-phylo-alignment         → per-marker alignment, trimming, concatenation
-phylo-model-selection   → substitution model testing (ModelFinder/ModelTest-NG)
-phylo-tree-inference    → ML/Bayesian tree inference, support, convergence
-phylo-visualization     → R-based annotated publication figures
-phylo-debug             → diagnosis and fix for any pipeline failure
+environment       → software setup and version management
+research-design   → literature review, question definition, study design
+data-acquisition  → GenBank/SRA survey, sampling plans, download
+assembly          → plastome/marker assembly from raw SRA reads
+alignment         → per-marker alignment, trimming, concatenation
+model-selection   → substitution model testing (ModelFinder/ModelTest-NG)
+tree-inference    → ML/Bayesian tree inference, support, convergence
+visualization     → R-based annotated publication figures
+manuscript        → Methods section drafting, figure captions, journal formatting
+debug             → diagnosis and fix for any pipeline failure
 ```
 
 ## Step 1 — Assess researcher level
@@ -46,42 +47,44 @@ digraph hub_routing {
     "Any report blocked/failed?" [shape=diamond];
     "BEAST2 pending calibration?" [shape=diamond];
 
-    "phylo-environment" [shape=doublecircle];
-    "phylo-research-design" [shape=doublecircle];
-    "phylo-data-acquisition" [shape=doublecircle];
-    "phylo-assemble" [shape=doublecircle];
-    "phylo-alignment" [shape=doublecircle];
-    "phylo-model-selection" [shape=doublecircle];
-    "phylo-tree-inference" [shape=doublecircle];
-    "phylo-visualization" [shape=doublecircle];
-    "phylo-debug" [shape=doublecircle];
+    "environment" [shape=doublecircle];
+    "research-design" [shape=doublecircle];
+    "data-acquisition" [shape=doublecircle];
+    "assembly" [shape=doublecircle];
+    "alignment" [shape=doublecircle];
+    "model-selection" [shape=doublecircle];
+    "tree-inference" [shape=doublecircle];
+    "visualization" [shape=doublecircle];
+    "debug" [shape=doublecircle];
     "PAUSE — await human" [shape=box, style=filled, fillcolor=lightyellow];
 
     "Check reports/" -> "No reports" [label="empty"];
     "Check reports/" -> "Any report blocked/failed?" [label="reports exist"];
-    "No reports" -> "phylo-environment";
-    "phylo-environment" -> "phylo-research-design";
-    "Any report blocked/failed?" -> "phylo-debug" [label="yes"];
+    "No reports" -> "environment";
+    "environment" -> "research-design";
+    "Any report blocked/failed?" -> "debug" [label="yes"];
     "Any report blocked/failed?" -> "Environment unverified" [label="no"];
-    "Environment unverified" -> "phylo-environment" [label="yes"];
+    "Environment unverified" -> "environment" [label="yes"];
     "Environment unverified" -> "Research design done?" [label="no"];
-    "Research design done?" -> "phylo-research-design" [label="no"];
+    "Research design done?" -> "research-design" [label="no"];
     "Research design done?" -> "Data acquired?" [label="yes"];
-    "Data acquired?" -> "phylo-data-acquisition" [label="no"];
+    "Data acquired?" -> "data-acquisition" [label="no"];
     "Data acquired?" -> "Raw reads?" [label="yes"];
-    "Raw reads?" -> "phylo-assemble" [label="yes"];
+    "Raw reads?" -> "assembly" [label="yes"];
     "Raw reads?" -> "Assembled?" [label="no (assembled seqs)"];
-    "Assembled?" -> "phylo-assemble" [label="no"];
+    "Assembled?" -> "assembly" [label="no"];
     "Assembled?" -> "Aligned?" [label="yes"];
-    "Aligned?" -> "phylo-alignment" [label="no"];
+    "Aligned?" -> "alignment" [label="no"];
     "Aligned?" -> "Model selected?" [label="yes"];
-    "Model selected?" -> "phylo-model-selection" [label="no"];
+    "Model selected?" -> "model-selection" [label="no"];
     "Model selected?" -> "Tree inferred?" [label="yes"];
     "Tree inferred?" -> "BEAST2 pending calibration?" [label="in progress"];
     "BEAST2 pending calibration?" -> "PAUSE — await human" [label="yes"];
-    "BEAST2 pending calibration?" -> "phylo-tree-inference" [label="no"];
-    "Tree inferred?" -> "phylo-visualization" [label="done, no figures"];
-    "Tree inferred?" -> "DONE" [label="figures exist"];
+    "BEAST2 pending calibration?" -> "tree-inference" [label="no"];
+    "Tree inferred?" -> "visualization" [label="done, no figures"];
+    "Tree inferred?" -> "Manuscript written?" [label="figures exist"];
+    "Manuscript written?" -> "manuscript" [label="no"];
+    "Manuscript written?" -> "DONE" [label="yes"];
 }
 ```
 
@@ -93,7 +96,7 @@ Present the researcher with a status summary across all plans before routing:
 
 ```
 Plan A: alignment complete → ready for model selection
-Plan B: assembly in progress → resume phylo-assemble
+Plan B: assembly in progress → resume the assembly skill
 ```
 
 ## Step 4 — Route to module
@@ -110,7 +113,7 @@ After each module completes, return to this hub. Update the researcher on overal
 ```
 Completed: environment ✓, research design ✓, data acquisition ✓, assembly ✓
 In progress: alignment (Plan A complete, Plan B running)
-Remaining: model selection → tree inference → visualization
+Remaining: model selection → tree inference → visualization → manuscript
 ```
 
 Ask whether to continue to the next module or pause.
@@ -136,6 +139,6 @@ This ensures both the researcher and a future AI agent instance can orient immed
 |---------|-----|
 | Routing to a module without checking reports/ first | Always read existing reports — re-running completed steps wastes time and overwrites results |
 | Treating all plans as synchronized | Each plan has independent state; check and route each separately |
-| Proceeding past a blocked/failed report | Any `blocked` or `failed` status routes to `phylo-debug` first, always |
-| Skipping `phylo-environment` at session start on a new machine | Environment must be verified even if reports exist — tools may not be installed |
+| Proceeding past a blocked/failed report | Any `blocked` or `failed` status routes to `debug` first, always |
+| Skipping `environment` at session start on a new machine | Environment must be verified even if reports exist — tools may not be installed |
 | Not updating `pipeline-status.md` at session end | Without this, the next session starts cold with no orientation |

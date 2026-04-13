@@ -1,6 +1,6 @@
 ---
-name: phylo-assemble
-description: Use when phylo-data-acquisition has identified raw SRA reads (genome skimming, WGS, target enrichment/HybSeq, or transcriptomes) that need assembly or marker extraction before alignment. Runs between phylo-data-acquisition and phylo-alignment. Use when assembled FASTA sequences are not directly available and must be generated from raw reads using reference-guided or de novo approaches.
+name: assembly
+description: Use when data-acquisition has identified raw SRA reads (genome skimming, WGS, target enrichment/HybSeq, or transcriptomes) that need assembly or marker extraction before alignment. Runs between data-acquisition and alignment. Use when assembled FASTA sequences are not directly available and must be generated from raw reads using reference-guided or de novo approaches.
 ---
 
 # Assembling Markers and Genomes from Raw Reads
@@ -128,7 +128,7 @@ data/assembled/
     Genus_species_accession.fasta
 ```
 
-Apply the naming convention from `phylo-data-acquisition`:
+Apply the naming convention from `data-acquisition`:
 ```
 >Genus_species_accession_marker
 ```
@@ -144,9 +144,9 @@ Rename FASTA headers immediately after assembly — do not carry through tool-ge
 | HybPiper gene recovery rate | ≥50% targets per sample | Flag low-recovery samples |
 | Assembly graph (GetOrganelle) | Single circular path | Inspect in Bandage if fragmented |
 | FASTA header consistency | All headers match naming convention | Rename before proceeding |
-| No empty output files | All expected files >0 bytes | Debug with `phylo-debug` |
+| No empty output files | All expected files >0 bytes | Debug with `debug` |
 
-On any failure → route to `phylo-debug` before proceeding.
+On any failure → route to `debug` before proceeding.
 
 ## Report
 
@@ -180,12 +180,12 @@ Plan: [planA / planB / ...]
 |------|---------|--------|-------------|
 
 ## Next Module
-phylo-alignment
+alignment
 ```
 
 ## Scripts
 
-Pre-built scripts for this module are in `skills/phylo-assemble/scripts/`. Load when needed:
+Pre-built scripts for this module are in `scripts/assembly/`. Load when needed:
 
 | Script | Purpose |
 |--------|---------|
@@ -206,21 +206,21 @@ Utility scripts (in `skills/utils/`):
 Usage examples:
 ```bash
 # GetOrganelle plastome assembly (land plant)
-bash skills/phylo-assemble/scripts/assemble_plastome_getorganelle.sh \
+bash scripts/assembly/assemble_plastome_getorganelle.sh \
   -1 SRR123_1.fastq -2 SRR123_2.fastq -o assemblies -s Zingiber_officinale
 
 # BWA-based assembly (reference-guided)
-bash skills/phylo-assemble/scripts/assemble_plastome_bwa.sh \
+bash scripts/assembly/assemble_plastome_bwa.sh \
   -1 SRR123_1.fastq -2 SRR123_2.fastq \
   -r reference_plastome.fasta -o assemblies -s Zingiber_officinale -c strict
 
 # HybPiper pipeline
-bash skills/phylo-assemble/scripts/run_hybpiper.sh \
+bash scripts/assembly/run_hybpiper.sh \
   -r Angiosperms353_targetfile.fasta -s sample_list.txt \
   -d data/raw -o hybpiper_output
 
 # Extract CDS from annotations
-python skills/phylo-assemble/scripts/extract_cds.py \
+python scripts/assembly/extract_cds.py \
   --input annotations/ --output data/cds/ --concatenate
 ```
 

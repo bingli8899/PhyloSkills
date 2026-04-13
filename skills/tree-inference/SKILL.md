@@ -1,5 +1,5 @@
 ---
-name: phylo-tree-inference
+name: tree-inference
 description: Use after model selection is complete. Infers phylogenetic trees using maximum likelihood (IQ-TREE, RAxML-NG), coalescent summary methods (ASTER: wASTRAL or ASTRAL-pro3), or Bayesian methods (MrBayes, BEAST2). Use when the researcher needs to run tree inference, choose between ML and Bayesian or coalescent approaches, assess branch support, evaluate convergence, or estimate divergence times. BEAST2 divergence time runs require human approval of calibration points before execution.
 ---
 
@@ -195,7 +195,7 @@ Open the `.p` files in Tracer to visualize trace plots. A well-mixed chain shows
 
 **Support threshold:** Posterior probability ≥ 0.95 for well-supported nodes.
 
-**If convergence fails:** Increase `ngen`, check for model misspecification, or inspect for long-branch taxa. Route to `phylo-debug`.
+**If convergence fails:** Increase `ngen`, check for model misspecification, or inspect for long-branch taxa. Route to `debug`.
 
 ## Step 3d — BEAST2 (divergence time estimation)
 
@@ -239,18 +239,18 @@ After any inference method, verify the tree makes biological sense before report
 - Are there any extreme long branches that suggest misidentified or chimeric sequences?
 - Do support values align with known difficult nodes (expect low support in rapid radiations)?
 
-Flag any unexpected topology to the researcher with a specific question — do not silently proceed. Unexpected results may indicate a data problem (→ `phylo-debug`) or genuine novel finding (→ document carefully).
+Flag any unexpected topology to the researcher with a specific question — do not silently proceed. Unexpected results may indicate a data problem (→ `debug`) or genuine novel finding (→ document carefully).
 
 ## QC Gate
 
 | Check | Threshold | Action on failure |
 |-------|-----------|-------------------|
-| UFBoot support | Key nodes ≥95 | Check alignment quality; route to `phylo-debug` |
+| UFBoot support | Key nodes ≥95 | Check alignment quality; route to `debug` |
 | SH-aLRT support | Key nodes ≥80 | As above |
 | ASTER local posterior | Key nodes ≥0.95 | Check gene tree quality; low support may indicate ILS |
 | ASTER tool choice | Matches dataset (paralogs → pro3; branch lengths → wASTRAL) | Re-run with correct tool |
 | Posterior probability | Key nodes ≥0.95 | Extend MCMC run |
-| MrBayes ASDSF | <0.01 | Extend `ngen`; route to `phylo-debug` |
+| MrBayes ASDSF | <0.01 | Extend `ngen`; route to `debug` |
 | BEAST2 ESS | All parameters ≥200 | Extend chain; do not report |
 | Outgroup placement | Correct per literature | Inspect for long-branch attraction |
 | BEAST2 calibrations | Human-approved | Cannot proceed without approval |
@@ -306,12 +306,12 @@ Plan: [planA / planB / ...]
 |------|---------|--------|-------------|
 
 ## Next Module
-phylo-visualization
+visualization
 ```
 
 ## Scripts
 
-Pre-built scripts for this module are in `skills/phylo-tree-inference/scripts/`. Load when needed:
+Pre-built scripts for this module are in `scripts/inference/`. Load when needed:
 
 | Script | Purpose |
 |--------|---------|
@@ -321,15 +321,15 @@ Pre-built scripts for this module are in `skills/phylo-tree-inference/scripts/`.
 Usage examples:
 ```bash
 # Infer per-gene trees (MODEL=TEST runs ModelFinder per gene)
-bash skills/phylo-tree-inference/scripts/build_gene_trees.sh \
+bash scripts/inference/build_gene_trees.sh \
   -i data/aligned/ -o output/gene_trees/ -m TEST -B 1000 -A 1000
 
 # Run coalescent (auto-detects tool; wASTRAL for IQ-TREE output)
-bash skills/phylo-tree-inference/scripts/run_aster.sh \
+bash scripts/inference/run_aster.sh \
   -i output/gene_trees/all_gene_trees.txt -o output/aster/
 
 # Run with concordance factors (requires concatenated alignment)
-bash skills/phylo-tree-inference/scripts/run_aster.sh \
+bash scripts/inference/run_aster.sh \
   -i output/gene_trees/all_gene_trees.txt -o output/aster/ \
   -c data/aligned/concatenated.fasta
 ```

@@ -1,5 +1,5 @@
 ---
-name: phylo-model-selection
+name: model-selection
 description: Use after alignment is complete and before tree inference. Selects the best-fit substitution model(s) for each marker or partition using ModelFinder or ModelTest-NG. Use when the researcher needs to determine which substitution model to apply in IQ-TREE, RAxML, MrBayes, or BEAST2, including partitioned schemes for multi-locus datasets.
 ---
 
@@ -160,7 +160,7 @@ Plan: [planA / planB / ...]
 |------|---------|--------|-------------|
 
 ## Next Module
-phylo-tree-inference
+tree-inference
 ```
 
 ## Common Mistakes

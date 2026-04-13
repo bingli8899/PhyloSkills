@@ -1,6 +1,6 @@
 ---
-name: phylo-research-design
-description: Use when starting a new phylogenetic study, when the biological question is undefined or needs refinement, or when a researcher needs guidance on taxon sampling strategy, marker selection, or outgroup choice. Use before phylo-data-acquisition. Requires literature review before any design recommendation is made.
+name: research-design
+description: Use when starting a new phylogenetic study, when the biological question is undefined or needs refinement, or when a researcher needs guidance on taxon sampling strategy, marker selection, or outgroup choice. Use before data-acquisition. Requires literature review before any design recommendation is made.
 ---
 
 # Designing a Phylogenetic Research Plan
@@ -84,7 +84,7 @@ Present the complete design as a summary and get explicit approval before writin
 
 ## QC Gate
 
-Do not proceed to `phylo-data-acquisition` until:
+Do not proceed to `data-acquisition` until:
 - [ ] Biological question is clearly and specifically stated
 - [ ] Target taxonomic scope and level are defined
 - [ ] Marker/data strategy is chosen and grounded in literature
@@ -116,7 +116,7 @@ Date: YYYY-MM-DD
 [Unsampled lineages, conflicting taxonomies, data availability concerns]
 
 ## Next Module
-phylo-data-acquisition
+data-acquisition
 ```
 
 Update the report if the design changes after initial approval.

@@ -1,6 +1,6 @@
 ---
-name: phylo-data-acquisition
-description: Use after phylo-research-design is complete and a biological question, target taxa, and marker strategy are defined. Surveys GenBank and SRA for available data, builds a taxon-by-marker coverage matrix, proposes sampling plans with explicit trade-offs, and downloads approved data. Use when the researcher needs to find, evaluate, and obtain molecular sequence data for phylogenetic analysis.
+name: data-acquisition
+description: Use after research-design is complete and a biological question, target taxa, and marker strategy are defined. Surveys GenBank and SRA for available data, builds a taxon-by-marker coverage matrix, proposes sampling plans with explicit trade-offs, and downloads approved data. Use when the researcher needs to find, evaluate, and obtain molecular sequence data for phylogenetic analysis.
 ---
 
 # Acquiring Phylogenetic Sequence Data
@@ -73,7 +73,7 @@ For each plan present:
 - Taxon count and which taxa are included/excluded
 - Marker or data-type count
 - Estimated missing data %
-- Downstream route: `phylo-assemble` (raw SRA reads) or `phylo-alignment` (assembled sequences)
+- Downstream route: `assembly` (raw SRA reads) or `alignment` (assembled sequences)
 - Key trade-off: what is gained and lost vs. adjacent plans
 
 Label plans descriptively from the data (e.g., *breadth-optimized*, *depth-optimized*, *balanced*, *all-inclusive*) — do not pre-assign labels.
@@ -127,7 +127,7 @@ for SRR_ID in $(cat sra_list.txt); do
   prefetch $SRR_ID -O data/raw/
   fasterq-dump data/raw/$SRR_ID/ -O data/raw/ --split-files
 done
-# Then hand off to phylo-assemble
+# Then hand off to assembly
 ```
 
 **Streaming mode** (storage is limited — download → assemble → delete raw, one sample at a time):
@@ -182,7 +182,7 @@ Mixed-source downloads are a common source of naming mismatches — standardize 
 - FASTA headers parseable (no special characters breaking downstream tools)
 - SRA downloads complete (file size > 0, paired files matched)
 
-On any failure → route to `phylo-debug`.
+On any failure → route to `debug`.
 
 ## Reports
 
@@ -227,7 +227,7 @@ Date: YYYY-MM-DD
 [Entrez Direct version, SRA Toolkit version]
 
 ## Next Module
-phylo-assemble (if SRA raw reads) / phylo-alignment (if assembled)
+assembly (if SRA raw reads) / alignment (if assembled)
 ```
 
 ### `reports/data-acquisition_YYYY-MM-DD.tex` — LaTeX accession table
@@ -250,7 +250,7 @@ One row per accession/run. Spans all plans — include a Plan column if multiple
 
 ## Scripts
 
-Pre-built scripts for this module are in `skills/phylo-data-acquisition/scripts/`. Load when needed:
+Pre-built scripts for this module are in `scripts/data/`. Load when needed:
 
 | Script | Purpose |
 |--------|---------|
@@ -260,15 +260,15 @@ Pre-built scripts for this module are in `skills/phylo-data-acquisition/scripts/
 Usage examples:
 ```bash
 # Survey only (no download)
-bash skills/phylo-data-acquisition/scripts/download_genbank.sh \
+bash scripts/data/download_genbank.sh \
   -g "Zingiberaceae" -m "matK,rbcL,ITS" -o data/genbank -s
 
 # Download GenBank sequences (≤300 per marker)
-bash skills/phylo-data-acquisition/scripts/download_genbank.sh \
+bash scripts/data/download_genbank.sh \
   -g "Zingiberaceae" -m "matK,rbcL,ITS,psbA" -o data/genbank -n 300
 
 # SRA download (auto mode — detects bulk vs. streaming)
-bash skills/phylo-data-acquisition/scripts/download_sra.sh \
+bash scripts/data/download_sra.sh \
   -l sra_list.txt -o data/raw
 ```
 
@@ -280,7 +280,7 @@ bash skills/phylo-data-acquisition/scripts/download_sra.sh \
 | Hardcoding a fixed number of taxa or markers | Let the coverage matrix reveal natural thresholds; don't pre-decide plan shapes |
 | Mixing naming conventions from different databases | Standardize to `Genus_species_accession_marker` at download time |
 | Treating missing data as a binary pass/fail | Estimate % per plan — some missing data is acceptable and expected |
-| Downloading SRA reads without checking library strategy | Confirm WGS/genome skimming vs. amplicon vs. RNA-seq before routing to phylo-assemble |
+| Downloading SRA reads without checking library strategy | Confirm WGS/genome skimming vs. amplicon vs. RNA-seq before routing to assembly |
 | Forgetting to record Entrez Direct and SRA Toolkit versions | Run `edirect -version` and `fasterq-dump --version`; log both in report |
 | Skipping storage estimation before bulk SRA download | Large WGS datasets can exceed hundreds of GB; always estimate first |
 | Deleting raw reads before verifying assembly output | Check file exists and is non-empty before `rm`; a failed assembly with deleted reads cannot be recovered |

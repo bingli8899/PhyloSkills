@@ -1,5 +1,5 @@
 ---
-name: phylo-debug
+name: debug
 description: Use when any pipeline module fails its QC gate, when a tool produces unexpected output, or when the researcher reports a problem at any stage. Diagnoses common failures in phylogenetic pipelines: bad sequence quality, alignment problems, assembly failures, download errors, file naming mismatches, non-convergence, unexpected tree topology, and software errors. Always identifies re-entry point after fix.
 ---
 
@@ -32,7 +32,7 @@ blastn -query suspect_sequence.fasta -db nt -remote \
   -max_target_seqs 5 -out blast_check.txt
 ```
 Remove sequences that do not match the expected gene or are chimeric. Document in the data-acquisition report.  
-**Re-entry:** `phylo-data-acquisition` (replace sequence) or `phylo-alignment` (re-align without it)
+**Re-entry:** `data-acquisition` (replace sequence) or `alignment` (re-align without it)
 
 ---
 
@@ -43,7 +43,7 @@ Remove sequences that do not match the expected gene or are chimeric. Document i
 esearch -db nuccore -query '"Genus" AND "matK" AND 500:900[SLEN]' ...
 ```
 Or remove post-download based on length. Flag removed accessions in report.  
-**Re-entry:** `phylo-data-acquisition`
+**Re-entry:** `data-acquisition`
 
 ---
 
@@ -58,7 +58,7 @@ blastn -query suspect.fasta -db reference.fasta -outfmt 6
 # awk or seqkit: seqkit seq --reverse --complement suspect.fasta
 ```
 Remove or reorient the sequence, then re-run alignment.  
-**Re-entry:** `phylo-alignment`
+**Re-entry:** `alignment`
 
 ---
 
@@ -79,7 +79,7 @@ seqkit replace -p "^(\\S+).*" -r "{kv}" -k rename_map.tsv sequences.fasta \
 grep ">" sequences_renamed.fasta | sort | uniq -d
 ```
 Rebuild any files (partition, taxon list) that reference the old names after renaming.  
-**Re-entry:** `phylo-alignment` (re-concatenate), `phylo-model-selection`, or `phylo-tree-inference` depending on where the mismatch was caught
+**Re-entry:** `alignment` (re-concatenate), `model-selection`, or `tree-inference` depending on where the mismatch was caught
 
 ---
 
@@ -90,7 +90,7 @@ Rebuild any files (partition, taxon list) that reference the old names after ren
 # Replace spaces and special characters
 sed 's/[ ():|,;]/_/g' sequences.fasta > sequences_clean.fasta
 ```
-**Re-entry:** `phylo-alignment`
+**Re-entry:** `alignment`
 
 ---
 
@@ -113,7 +113,7 @@ get_organelle_from_reads.py -1 R1.fastq.gz -2 R2.fastq.gz \
 # Inspect coverage in assembly graph with Bandage
 # If fragmented: try NOVOPlasty as alternative
 ```
-**Re-entry:** `phylo-assemble`
+**Re-entry:** `assembly`
 
 ---
 
@@ -132,7 +132,7 @@ hybpiper stats -t_dna target.fasta gene --sample_names namelist.txt
 
 # Low-coverage samples: consider excluding or supplementing from GenBank
 ```
-**Re-entry:** `phylo-assemble` (re-run with adjusted settings) or `phylo-data-acquisition` (supplement with GenBank sequences)
+**Re-entry:** `assembly` (re-run with adjusted settings) or `data-acquisition` (supplement with GenBank sequences)
 
 ---
 
@@ -155,7 +155,7 @@ done
 # With API key (recommended for bulk downloads)
 export NCBI_API_KEY="your_key_here"
 ```
-**Re-entry:** `phylo-data-acquisition`
+**Re-entry:** `data-acquisition`
 
 ---
 
@@ -173,7 +173,7 @@ fasterq-dump SRR123456 --split-files -O data/raw/
 # Verify output
 ls -lh data/raw/SRR123456*
 ```
-**Re-entry:** `phylo-data-acquisition`
+**Re-entry:** `data-acquisition`
 
 ---
 
@@ -187,14 +187,14 @@ seqkit seq --min-len $(echo "median_len * 0.5" | bc) aligned.fasta \
   > filtered.fasta
 mafft --linsi filtered.fasta > realigned.fasta
 ```
-**Re-entry:** `phylo-alignment`
+**Re-entry:** `alignment`
 
 ---
 
 **Symptom:** Parsimony-informative sites <5% of alignment length  
 **Diagnosis:** Marker is too conserved for the taxonomic level, or too few taxa  
-**Fix:** Discuss with researcher — consider adding a more variable marker or expanding taxon sampling. This may require going back to `phylo-data-acquisition`.  
-**Re-entry:** `phylo-research-design` (reconsider marker strategy) or `phylo-data-acquisition` (add marker)
+**Fix:** Discuss with researcher — consider adding a more variable marker or expanding taxon sampling. This may require going back to `data-acquisition`.  
+**Re-entry:** `research-design` (reconsider marker strategy) or `data-acquisition` (add marker)
 
 ---
 
@@ -215,7 +215,7 @@ mafft --linsi filtered.fasta > realigned.fasta
 # Extend run — add to existing run file rather than starting over:
 # In MrBayes: 'mcmc' continues from checkpoint
 ```
-**Re-entry:** `phylo-tree-inference`
+**Re-entry:** `tree-inference`
 
 ---
 
@@ -227,7 +227,7 @@ mafft --linsi filtered.fasta > realigned.fasta
 - Remove taxa with extreme branch lengths
 - Run with fewer partitions
 
-**Re-entry:** `phylo-tree-inference`
+**Re-entry:** `tree-inference`
 
 ---
 
@@ -250,15 +250,15 @@ dotTree(tree)   # or barplot(tree$edge.length)
 # Check alignment of sequences forming unexpected clade
 ```
 If contamination suspected → BLAST sequences against NCBI nt (see category 1).  
-**Re-entry:** `phylo-alignment` or `phylo-tree-inference`
+**Re-entry:** `alignment` or `tree-inference`
 
 ---
 
 ### 7. Software Errors
 
 **Symptom:** Executable not found or `command not found`  
-**Fix:** Route immediately to `phylo-environment`. Do not attempt workarounds.  
-**Re-entry:** `phylo-environment`, then back to originating module
+**Fix:** Route immediately to `environment`. Do not attempt workarounds.  
+**Re-entry:** `environment`, then back to originating module
 
 ---
 
@@ -271,11 +271,11 @@ iqtree2 -s concatenated.fasta -p partition.nex -B 1000 -T 4
 # Or reduce bootstrap replicates for initial exploratory run
 iqtree2 -s concatenated.fasta -p partition.nex -B 100 -T 4
 ```
-**Re-entry:** `phylo-tree-inference`
+**Re-entry:** `tree-inference`
 
 ---
 
-**Symptom:** R package not available or version conflict in `phylo-visualization`  
+**Symptom:** R package not available or version conflict in `visualization`  
 **Fix:**
 ```r
 # Check installed version
@@ -287,7 +287,7 @@ BiocManager::install("ggtree", force = TRUE)
 # If conflict with another package, use renv for project isolation
 # install.packages("renv"); renv::init()
 ```
-**Re-entry:** `phylo-visualization`
+**Re-entry:** `visualization`
 
 ---
 
