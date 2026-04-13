@@ -51,6 +51,7 @@
 # =============================================================================
 
 set -euo pipefail
+_PROV_START=$(date +%s)
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 TOOL="auto"
@@ -58,6 +59,7 @@ THREADS=$(nproc 2>/dev/null || echo 8)
 WEIGHT_MODE=2
 CONCAT_TREE=""
 ASTER_BIN_DIR=""
+PROVENANCE_DIR=""
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 usage() {
@@ -65,7 +67,7 @@ usage() {
     exit 1
 }
 
-while getopts "i:o:T:t:u:c:a:h" opt; do
+while getopts "i:o:T:t:u:c:a:P:h" opt; do
     case $opt in
         i) GENE_TREES="$OPTARG" ;;
         o) OUTDIR="$OPTARG" ;;
@@ -74,6 +76,7 @@ while getopts "i:o:T:t:u:c:a:h" opt; do
         u) WEIGHT_MODE="$OPTARG" ;;
         c) CONCAT_TREE="$OPTARG" ;;
         a) ASTER_BIN_DIR="$OPTARG" ;;
+        P) PROVENANCE_DIR="$OPTARG" ;;
         h|*) usage ;;
     esac
 done
@@ -256,3 +259,33 @@ echo "    - Concordant topology → ILS unlikely to affect conclusions"
 echo "    - Discordant topology → ILS present; species tree is more appropriate"
 echo ""
 echo "Output: ${SPECIES_TREE}"
+
+# ── Provenance ────────────────────────────────────────────────────────────────
+if [[ -n "${PROVENANCE_DIR:-}" ]]; then
+    mkdir -p "$PROVENANCE_DIR"
+    PROV_FILE="${PROVENANCE_DIR}/run_aster_$(date +%Y-%m-%d).json"
+    python3 - <<PYEOF
+import json, pathlib
+data = {
+    "script": "run_aster",
+    "tool": "${TOOL}",
+    "version": "v1.23",
+    "date": "$(date +%Y-%m-%dT%H:%M:%S)",
+    "parameters": {
+        "tool": "${TOOL}",
+        "threads": ${THREADS},
+        "weight_mode": ${WEIGHT_MODE},
+        "n_gene_trees": $(grep -c '' "${GENE_TREES}" 2>/dev/null || echo 0)
+    },
+    "input_files": {"gene_trees": "${GENE_TREES}"},
+    "output_files": {"species_tree": "${SPECIES_TREE:-}"},
+    "runtime_seconds": $(( $(date +%s) - _PROV_START )),
+    "exit_code": 0,
+    "working_dir": "$(pwd)"
+}
+pathlib.Path("${PROV_FILE}").parent.mkdir(parents=True, exist_ok=True)
+with open("${PROV_FILE}", "w") as f:
+    json.dump(data, f, indent=2)
+print(f"Provenance written: ${PROV_FILE}")
+PYEOF
+fi

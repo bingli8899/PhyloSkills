@@ -51,6 +51,7 @@
 # =============================================================================
 
 set -euo pipefail
+_PROV_START=$(date +%s)
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 MODEL="TEST"
@@ -58,6 +59,7 @@ UFBOOT=1000
 ALRT=1000
 THREADS=2
 PARALLEL_JOBS=1
+PROVENANCE_DIR=""
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 usage() {
@@ -65,7 +67,7 @@ usage() {
     exit 1
 }
 
-while getopts "i:o:m:B:A:t:j:h" opt; do
+while getopts "i:o:m:B:A:t:j:P:h" opt; do
     case $opt in
         i) INDIR="$OPTARG" ;;
         o) OUTDIR="$OPTARG" ;;
@@ -74,6 +76,7 @@ while getopts "i:o:m:B:A:t:j:h" opt; do
         A) ALRT="$OPTARG" ;;
         t) THREADS="$OPTARG" ;;
         j) PARALLEL_JOBS="$OPTARG" ;;
+        P) PROVENANCE_DIR="$OPTARG" ;;
         h|*) usage ;;
     esac
 done
@@ -230,3 +233,39 @@ echo ""
 echo "Note: IQ-TREE .treefile always includes branch lengths"
 echo "  → Use wASTRAL (weighted) by default in run_aster.sh"
 echo "  → Only use ASTRAL-Pro3 if multi-copy/paralog loci are present"
+
+# ── Provenance ────────────────────────────────────────────────────────────────
+if [[ -n "${PROVENANCE_DIR:-}" ]]; then
+    IQ_VER=$("$IQTREE_BIN" --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+    mkdir -p "$PROVENANCE_DIR"
+    PROV_FILE="${PROVENANCE_DIR}/build_gene_trees_$(date +%Y-%m-%d).json"
+    python3 - <<PYEOF
+import json, pathlib
+data = {
+    "script": "build_gene_trees",
+    "tool": "iqtree2",
+    "version": "${IQ_VER}",
+    "date": "$(date +%Y-%m-%dT%H:%M:%S)",
+    "parameters": {
+        "model": "${MODEL}",
+        "ufboot": ${UFBOOT},
+        "alrt": ${ALRT},
+        "threads_per_job": ${THREADS},
+        "parallel_jobs": ${PARALLEL_JOBS}
+    },
+    "input_files": {"alignment_dir": "${INDIR}"},
+    "output_files": {
+        "gene_trees_dir": "${OUTDIR}",
+        "all_gene_trees": "${OUTDIR}/all_gene_trees.txt"
+    },
+    "n_gene_trees": ${N_TREES},
+    "runtime_seconds": $(( $(date +%s) - _PROV_START )),
+    "exit_code": 0,
+    "working_dir": "$(pwd)"
+}
+pathlib.Path("${PROV_FILE}").parent.mkdir(parents=True, exist_ok=True)
+with open("${PROV_FILE}", "w") as f:
+    json.dump(data, f, indent=2)
+print(f"Provenance written: ${PROV_FILE}")
+PYEOF
+fi

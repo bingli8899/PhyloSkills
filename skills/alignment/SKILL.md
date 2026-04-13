@@ -9,13 +9,18 @@ description: Use after assembled or downloaded sequences are organized and ready
 
 Align each marker separately, assess quality, trim if needed, then build the combined matrix. Tool and parameter choice depends on dataset size and sequence type — one setting does not fit all.
 
-## Step 1 — Read upstream reports
+## Step 1 — Read upstream reports and locus guide
 
 Load `reports/[planX/]assembly_YYYY-MM-DD.md` or `reports/data-acquisition_YYYY-MM-DD.md`. Extract:
 - Number of sequences per marker
 - Sequence type (DNA / protein / rRNA)
 - Expected sequence length range per marker
 - Number of markers (single vs. multi-locus)
+
+**Always read `skills/alignment/references/locus-guide.md` before choosing MAFFT strategy.**
+It contains per-marker strategy recommendations for all standard plastid markers, ITS/ETS,
+and Angiosperms353. The general table in Step 2 below is a summary; the locus guide has details
+for known problematic regions and codon-aware alignment recommendations.
 
 ## Step 2 — Select MAFFT strategy
 

@@ -69,7 +69,9 @@ usage() {
     exit 1
 }
 
-while getopts "i:o:s:Tm:t:cd:f:h" opt; do
+PROVENANCE_DIR=""
+
+while getopts "i:o:s:Tm:t:cd:f:P:h" opt; do
     case $opt in
         i) INDIR="$OPTARG" ;;
         o) OUTDIR="$OPTARG" ;;
@@ -80,6 +82,7 @@ while getopts "i:o:s:Tm:t:cd:f:h" opt; do
         c) CONCATENATE=true ;;
         d) DATA_TYPE="$OPTARG" ;;
         f) FORMAT="$OPTARG" ;;
+        P) PROVENANCE_DIR="$OPTARG" ;;
         h|*) usage ;;
     esac
 done
@@ -301,3 +304,44 @@ fi
 
 echo ""
 echo "Next step: phylo-model-selection"
+
+# ── Provenance ────────────────────────────────────────────────────────────────
+if [[ -n "${PROVENANCE_DIR:-}" ]]; then
+    MAFFT_VER=$(mafft --version 2>&1 | head -1 | awk '{print $1}')
+    TRIMAL_VER=""
+    [[ "$TRIM" == true ]] && TRIMAL_VER=$(trimal --version 2>&1 | head -1 || echo "unknown")
+    END_T=$(date +%s)
+    mkdir -p "$PROVENANCE_DIR"
+    PROV_FILE="${PROVENANCE_DIR}/align_markers_$(date +%Y-%m-%d).json"
+    python3 - <<PYEOF
+import json
+data = {
+    "script": "align_markers",
+    "tool": "mafft",
+    "version": "${MAFFT_VER}",
+    "date": "$(date +%Y-%m-%dT%H:%M:%S)",
+    "parameters": {
+        "strategy": "${STRATEGY}",
+        "threads": ${THREADS},
+        "trim": ${TRIM},
+        "trim_mode": "${TRIM_MODE}",
+        "concatenate": ${CONCATENATE},
+        "data_type": "${DATA_TYPE}"
+    },
+    "input_files": {"input_dir": "${INDIR}"},
+    "output_files": {
+        "alignment_dir": "${OUTDIR}",
+        "stats": "${OUTDIR}/alignment_stats.tsv"
+    },
+    "trimal_version": "${TRIMAL_VER}",
+    "runtime_seconds": $(( $(date +%s) - _PROV_START )),
+    "exit_code": 0,
+    "working_dir": "$(pwd)"
+}
+import pathlib
+pathlib.Path("${PROV_FILE}").parent.mkdir(parents=True, exist_ok=True)
+with open("${PROV_FILE}", "w") as f:
+    json.dump(data, f, indent=2)
+print(f"Provenance written: ${PROV_FILE}")
+PYEOF
+fi
