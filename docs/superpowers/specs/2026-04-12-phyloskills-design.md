@@ -21,6 +21,7 @@ PhyloSkills is a hub-and-spoke skill suite that coaches an AI agent to assist a 
 phylogenetic-analysis (hub)
 ├── phylo-research-design
 ├── phylo-data-acquisition
+├── phylo-assemble          ← NEW: assembly/extraction when raw reads available
 ├── phylo-alignment
 ├── phylo-model-selection
 ├── phylo-tree-inference
@@ -39,7 +40,7 @@ Every module writes reports to `reports/` at completion (and updated continuousl
 ### Report conventions
 - **Filename format:** `reports/<module-name>_YYYY-MM-DD.<ext>`
 - **Format:** Markdown (`.md`) by default; LaTeX (`.tex`) where specified
-- **Readable by:** Both humans and AI agents
+- **Readable by:** Both humans and AI agents 
 - **Purpose (dual):**
   1. Human audit trail — what the AI did, what decisions were made, why
   2. AI checkpoint — agent reads reports on session start to determine resume point
@@ -82,31 +83,88 @@ Every module writes reports to `reports/` at completion (and updated continuousl
 
 ### 2. `phylo-data-acquisition`
 
-**Trigger:** Research design is finalized; need to download sequence data
+**Trigger:** Research design is finalized; need to survey and download sequence data
 
 **Process:**
 1. Read `phylo-research-design` report to understand organism group, markers, taxonomic scope
-2. Adaptively recommend databases based on organism group + markers + taxonomic level (not a fixed list — reasoning driven by context)
-3. Guide search query construction, taxon filters, sequence length filters, date filters
-4. Help organize downloaded files with consistent naming conventions
-5. Track every accession downloaded: ID, database, date, sequence metadata
+2. **Data landscape survey first** — before downloading anything, search both GenBank and SRA to understand what data types are available for the group:
+   - GenBank: assembled sequences, gene records, plastomes, whole genomes
+   - SRA: raw read datasets (genome skimming, target enrichment/HybSeq, transcriptomes, WGS)
+3. **Search strategy** — use structured keyword combinations:
+   - Primary: `"<group name>" AND (phylogeny OR phylogenetic OR phylogenom* OR plastome OR "genome skimming" OR "target enrichment" OR transcriptome)`
+   - Marker-specific: `(rbcL OR matK OR trnL OR ITS OR psbA OR nrITS)` combined with group name
+   - Adapt terms to organism group (e.g., add plastid gene names specific to the lineage)
+4. **Data type decision** — AI recommends the best available data strategy based on survey results:
+   - If assembled gene sequences available → download FASTA from GenBank (standard route → `phylo-alignment`)
+   - If SRA contains genome skimming / WGS data → recommend full plastome or whole-genome approach (route → `phylo-assemble`)
+   - If SRA contains target enrichment (HybSeq/Angiosperms353) data → recommend target capture assembly (route → `phylo-assemble`)
+   - If both exist → recommend combined strategy; confirm with researcher
+   - **Principle: more markers = better; whole plastome/genome preferred over single markers when data permits**
+5. Present data strategy recommendation to researcher and get confirmation before downloading
+6. Guide search query construction, taxon filters, sequence length filters, date ranges
+7. Download confirmed data; enforce consistent file naming conventions
+8. Track every accession: ID, database, data type, download date, sequence metadata
 
-**QC gate:** Sequence count check, format validation, file naming consistency, no duplicate accessions
+**QC gate:** Sequence/SRA run count check, format validation, file naming consistency, no duplicate accessions  
+**On QC failure:** Route to `phylo-debug`
 
 **Reports (two outputs):**
-- `reports/data-acquisition_YYYY-MM-DD.tex` — LaTeX format  
-  - Table of every accession: accession ID, taxon name, database source, download date, sequence length, gene/marker
+- `reports/data-acquisition_YYYY-MM-DD.tex` — LaTeX format
+  - Table of every accession/SRA run: ID, taxon name, database source, data type, download date, sequence length or read count, gene/marker or library strategy
   - Suitable for supplementary materials in a manuscript
-- `reports/data-acquisition_YYYY-MM-DD.md` — Narrative format  
-  - Search strategy used for each database
+- `reports/data-acquisition_YYYY-MM-DD.md` — Narrative format
+  - Data landscape survey summary (what was found, what data types exist for the group)
+  - Search queries used for each database
+  - Data strategy decision and reasoning (why this data type was chosen)
   - Filters applied and why
-  - Sequences included vs. excluded with reasoning
+  - Sequences/runs included vs. excluded with reasoning
   - Data quality notes
-  - Recommended next module: `phylo-alignment`
+  - Recommended next module: `phylo-assemble` (if raw reads) or `phylo-alignment` (if assembled sequences)
 
 ---
 
-### 3. `phylo-alignment`
+### 3. `phylo-assemble`
+
+**Trigger:** `phylo-data-acquisition` determines raw reads are available in SRA (genome skimming, WGS, target enrichment, transcriptomes)
+
+**Process:**
+1. Read data-acquisition report to understand data type, SRA run IDs, and reference availability
+2. Determine assembly strategy based on data type:
+   - **Genome skimming / WGS → plastome assembly:**
+     - Primary: GetOrganelle (chloroplast/mitochondrial genome assembly from WGS)
+     - Alternative: NOVOPlasty (seed-and-extend assembler)
+     - Output: assembled plastome FASTA → extract individual genes with custom scripts or mfannot/PGA
+   - **Genome skimming / WGS → nuclear marker extraction:**
+     - Map reads to reference gene sequences using BWA or Bowtie2 + SAMtools; call consensus
+     - Or use target-bait references (Angiosperms353 probes) as mapping targets
+   - **Target enrichment (HybSeq / Angiosperms353 / custom baits) → marker assembly:**
+     - Primary: HybPiper (purpose-built for target enrichment data)
+     - Output: assembled target gene FASTA files per sample
+   - **Transcriptome → gene extraction:**
+     - Assemble with Trinity; extract target genes via BLAST against reference
+3. Assess reference availability:
+   - Published whole-genome or plastome reference for the group → use as mapping reference
+   - No close reference → use nearest published relative; flag to researcher
+   - Multiple references available → recommend the most complete and recently published
+4. Download SRA reads (prefetch + fasterq-dump)
+5. Run appropriate assembly pipeline; review assembly statistics (coverage, completeness, length)
+6. Collect all assembled sequences into organized FASTA files ready for alignment
+
+**QC gate:** Assembly completeness check, minimum coverage threshold, gene recovery rate (for target enrichment), no contamination flags  
+**On QC failure:** Route to `phylo-debug`
+
+**Report:** `reports/assembly_YYYY-MM-DD.md`
+- SRA runs processed
+- Assembly method and reference used, with justification
+- Assembly statistics per sample (coverage, length, completeness %)
+- Genes/markers successfully recovered
+- Samples that failed assembly and why
+- Output file paths
+- Recommended next module: `phylo-alignment`
+
+---
+
+### 4. `phylo-alignment`
 
 **Trigger:** Sequences downloaded and organized; ready for alignment
 
@@ -167,20 +225,26 @@ Every module writes reports to `reports/` at completion (and updated continuousl
 2. Guide ML vs Bayesian decision based on research question and available compute:
    - ML primary: IQ-TREE (most cases)
    - ML alternative: RAxML-NG
-   - Bayesian: MrBayes (topology focus), BEAST2 (divergence times / phylodynamics)
+   - Bayesian topology: MrBayes
+   - Divergence time / phylodynamics: BEAST2
 3. Configure run: substitution model, bootstrap replicates or posterior sampling, partitions
-4. Assess support values: bootstrap thresholds (≥70 UFBoot, ≥95 standard), posterior probabilities (≥0.95)
-5. Convergence check for Bayesian runs (ESS, PSRF via Tracer)
-6. Sanity check tree topology against known biology
+4. **BEAST2 divergence time gate (HARD STOP):** If researcher selects BEAST2 for time-calibrated analysis:
+   - AI proposes candidate fossil/secondary calibration points from literature
+   - **Pipeline PAUSES — human agent must review and confirm calibration points before proceeding**
+   - Only after explicit human approval does the AI configure the BEAST2 XML and run
+5. Assess support values: bootstrap thresholds (≥70 UFBoot, ≥95 standard), posterior probabilities (≥0.95)
+6. Convergence check for Bayesian/BEAST2 runs (ESS ≥200, PSRF ≈1.0 via Tracer)
+7. Sanity check tree topology against known biology
 
-**QC gate:** Support values adequate, topology biologically plausible, convergence confirmed (Bayesian)  
+**QC gate:** Support values adequate, topology biologically plausible, convergence confirmed (Bayesian/BEAST2)  
 **On QC failure:** Route to `phylo-debug`
 
 **Report:** `reports/tree-inference_YYYY-MM-DD.md`
 - Tool, version, and exact command used
 - Model(s) applied
 - Bootstrap/posterior support summary
-- Convergence diagnostics (Bayesian only)
+- Convergence diagnostics (Bayesian/BEAST2 only)
+- Calibration points used (BEAST2 only) — with human-approval record
 - Notable topology features
 - Output file paths (tree files)
 - Recommended next module: `phylo-visualization`
@@ -256,39 +320,47 @@ Every module writes reports to `reports/` at completion (and updated continuousl
 **Decision logic:**
 - No reports exist → start at `phylo-research-design`
 - Research design report exists, no data report → `phylo-data-acquisition`
-- Data report exists, no alignment → `phylo-alignment`
+- Data report exists, data type = raw reads (SRA) → `phylo-assemble`
+- Data report exists, data type = assembled sequences → `phylo-alignment`
+- Assembly report exists, no alignment → `phylo-alignment`
 - Alignment done, no model → `phylo-model-selection`
 - Model done, no tree → `phylo-tree-inference`
+- Tree inference report shows BEAST2 pending human calibration approval → PAUSE, await human
 - Tree done, no visualization → `phylo-visualization`
 - Any report shows blocked/failed status → `phylo-debug`
 
 ---
 
-## Case Study: Plant Systematics
+## Case Study: Plant Systematics (Zingiberaceae)
 
 ### Scenario
-A graduate student asks: "Are these two genera in family Apiaceae (carrots/parsley family) actually distinct, or should one be synonymized with the other?"
+A graduate student asks: "What are the phylogenetic relationships within Zingiberaceae (the ginger family), and can we resolve generic boundaries using the best available molecular data?"
 
-### Dataset
-- **Organism:** Flowering plants (Apiaceae), genus-level question
-- **Markers:** Plastid (*matK*, *rbcL*) + nuclear (ITS2) — tri-locus dataset
-- **Taxonomic scope:** ~30 ingroup species, 3 outgroup species
+### Dataset strategy (determined by `phylo-data-acquisition` survey)
+- **Organism:** Zingiberaceae, family-level with genus-level resolution
+- **Taxonomic scope:** Representative species across all major genera; outgroups from Musaceae/Cannaceae
+- **Data survey outcome:** SRA contains genome skimming datasets for several genera + GenBank has assembled plastid genes and ITS for many species → combined strategy recommended
+  - SRA runs → `phylo-assemble` (GetOrganelle for plastomes, HybPiper if HybSeq data found)
+  - GenBank assembled sequences → supplement taxa missing from SRA
+- **Markers:** Full plastome (if assembly succeeds) or multi-locus plastid (*matK*, *rbcL*, *trnL-F*, *psbA-trnH*) + nuclear (ITS, nrETS) — more markers preferred
 
 ### Pipeline walkthrough
-1. **Research design:** Literature review of Apiaceae systematics, prior treatments of target genera, established marker utility for family
-2. **Data acquisition:** NCBI GenBank for all three markers; BOLD as secondary for ITS2; LaTeX accession table + MD search narrative
-3. **Alignment:** MAFFT `--auto` per marker; concatenation for combined analysis
-4. **Model selection:** IQ-TREE ModelFinder with partitioned scheme (one model per marker)
-5. **Tree inference:** IQ-TREE ML + 1000 ultrafast bootstrap replicates
-6. **Visualization:** `ggtree` + `ggplot2` — annotated tree with bootstrap support, clade boxes, scale bar
-7. **Debug scenario:** File naming mismatch — sequences downloaded from NCBI used accession IDs as names, BOLD used species names; alignment file has mixed naming causing downstream errors → `phylo-debug` diagnoses, standardizes names, re-runs alignment
+1. **Research design:** Literature review of Zingiberaceae systematics, landmark papers (e.g., Kress et al.), current generic concepts, known problem taxa
+2. **Data acquisition:** SRA + GenBank survey using structured search terms; data strategy decision (assembly vs. direct download); LaTeX accession/run table + MD narrative
+3. **Assembly:** GetOrganelle on genome skimming SRA runs → assembled plastomes; gene extraction via annotation; supplement with GenBank sequences for missing taxa
+4. **Alignment:** MAFFT `--auto` per marker or whole-plastome alignment; partitioned concatenated matrix
+5. **Model selection:** IQ-TREE ModelFinder with partitioned scheme per marker/region
+6. **Tree inference:** IQ-TREE ML + 1000 ultrafast bootstrap; optionally BEAST2 for divergence times (calibration points from Zingiberales fossil record — **human approval required before run**)
+7. **Visualization:** `ggtree` + `ggplot2` — annotated tree with bootstrap support, clade boxes, divergence time bars if BEAST2 used
+8. **Debug scenario:** File naming mismatch — SRA-assembled sequences use run accession IDs (e.g., `SRR12345_plastome`) while GenBank sequences use species names; mixed naming breaks alignment → `phylo-debug` diagnoses, standardizes to `Genus_species_accession` format, re-runs
 
 ### Expected outputs
 - `reports/research-design_2026-04-12.md`
 - `reports/data-acquisition_2026-04-12.tex` + `reports/data-acquisition_2026-04-12.md`
+- `reports/assembly_2026-04-12.md`
 - `reports/alignment_2026-04-12.md`
 - `reports/model-selection_2026-04-12.md`
-- `reports/tree-inference_2026-04-12.md`
+- `reports/tree-inference_2026-04-12.md` *(includes BEAST2 calibration approval record if used)*
 - `reports/visualization_2026-04-12.md`
 - `reports/debug_2026-04-12.md`
 
@@ -307,6 +379,7 @@ PhyloSkills/
 │   ├── research-design_YYYY-MM-DD.md
 │   ├── data-acquisition_YYYY-MM-DD.tex
 │   ├── data-acquisition_YYYY-MM-DD.md
+│   ├── assembly_YYYY-MM-DD.md
 │   ├── alignment_YYYY-MM-DD.md
 │   ├── model-selection_YYYY-MM-DD.md
 │   ├── tree-inference_YYYY-MM-DD.md
@@ -318,6 +391,8 @@ PhyloSkills/
     ├── phylo-research-design/
     │   └── SKILL.md
     ├── phylo-data-acquisition/
+    │   └── SKILL.md
+    ├── phylo-assemble/
     │   └── SKILL.md
     ├── phylo-alignment/
     │   └── SKILL.md
@@ -336,5 +411,5 @@ PhyloSkills/
 ## Open Questions / Future Scope
 
 - Should `reports/` be per-project (subfolder by project name/date) or flat? Currently flat — revisit if multiple concurrent projects needed.
-- BEAST2 / divergence time estimation is mentioned as an alternative in `phylo-tree-inference` but not fully specced — could become its own module later.
 - Population-level analyses (haplotype networks, PopART, DnaSP) not covered in v1 — future `phylo-population` module.
+- `phylo-assemble` currently covers GetOrganelle, NOVOPlasty, HybPiper, and Trinity; additional assemblers (e.g., Captus, IOGA) could be added as the skill matures.
