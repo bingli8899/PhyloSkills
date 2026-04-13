@@ -94,32 +94,62 @@ Every module writes reports to `reports/` at completion (and updated continuousl
    - Primary: `"<group name>" AND (phylogeny OR phylogenetic OR phylogenom* OR plastome OR "genome skimming" OR "target enrichment" OR transcriptome)`
    - Marker-specific: `(rbcL OR matK OR trnL OR ITS OR psbA OR nrITS)` combined with group name
    - Adapt terms to organism group (e.g., add plastid gene names specific to the lineage)
-4. **Data type decision** — AI recommends the best available data strategy based on survey results:
-   - If assembled gene sequences available → download FASTA from GenBank (standard route → `phylo-alignment`)
-   - If SRA contains genome skimming / WGS data → recommend full plastome or whole-genome approach (route → `phylo-assemble`)
-   - If SRA contains target enrichment (HybSeq/Angiosperms353) data → recommend target capture assembly (route → `phylo-assemble`)
-   - If both exist → recommend combined strategy; confirm with researcher
+4. **Sampling matrix analysis** — after the survey, AI builds a taxa × markers/data-type availability matrix:
+   - For each taxon found, record which markers/data types are available (e.g., GenBank *matK* only, SRA genome skimming, both, none)
+   - Identify coverage gaps: taxa with rich data vs. taxa with only 1–2 markers
+   - Compute coverage statistics: total taxa available, per-marker taxon counts, data type breakdown
+5. **Generate sampling plans** — AI proposes 2–4 explicit plans representing different taxon/marker trade-offs, for example:
+   - **Plan A (broad taxon sampling):** maximum taxa, minimum marker requirement (e.g., 80 taxa × 3 markers — include any taxon with ≥3 markers)
+   - **Plan B (balanced):** moderate taxa, moderate markers (e.g., 50 taxa × 6 markers)
+   - **Plan C (marker-rich):** fewer taxa, maximum markers/genomic data (e.g., 20 taxa × 10+ markers or whole plastome)
+   - **Plan D (all data):** include everything available regardless of per-taxon gaps; use missing-data-tolerant analysis
+   - Plans scale to what the actual data landscape supports — AI generates realistic plans based on the survey, not hypothetical ones
+   - For each plan: list exact taxon count, marker/data-type count, estimated missing data %, and recommended downstream approach
+6. **Human selects plan(s)** — researcher chooses one plan OR multiple plans (all selected plans are downloaded and run as parallel analyses through the pipeline)
+   - If multiple plans selected: each plan gets its own subdirectory and report series (e.g., `reports/planA/`, `reports/planB/`)
+7. **Data type decision** — applied per plan:
+   - Assembled gene sequences → download FASTA from GenBank (route → `phylo-alignment`)
+   - SRA genome skimming / WGS data → plastome or whole-genome approach (route → `phylo-assemble`)
+   - SRA target enrichment (HybSeq/Angiosperms353) data → target capture assembly (route → `phylo-assemble`)
+   - Mixed → combined strategy within the plan
    - **Principle: more markers = better; whole plastome/genome preferred over single markers when data permits**
-5. Present data strategy recommendation to researcher and get confirmation before downloading
-6. Guide search query construction, taxon filters, sequence length filters, date ranges
-7. Download confirmed data; enforce consistent file naming conventions
-8. Track every accession: ID, database, data type, download date, sequence metadata
+8. Guide search query construction, taxon filters, sequence length filters, date ranges
+9. Download confirmed data per plan; enforce consistent file naming conventions
+10. Track every accession: ID, database, data type, download date, sequence metadata, plan assignment
 
 **QC gate:** Sequence/SRA run count check, format validation, file naming consistency, no duplicate accessions  
 **On QC failure:** Route to `phylo-debug`
 
-**Reports (two outputs):**
+**Reports (two outputs, written once per run; plan-specific data goes into plan subdirs):**
 - `reports/data-acquisition_YYYY-MM-DD.tex` — LaTeX format
-  - Table of every accession/SRA run: ID, taxon name, database source, data type, download date, sequence length or read count, gene/marker or library strategy
+  - Table of every accession/SRA run across all plans: ID, taxon name, database source, data type, download date, sequence length or read count, gene/marker or library strategy, plan assignment
   - Suitable for supplementary materials in a manuscript
 - `reports/data-acquisition_YYYY-MM-DD.md` — Narrative format
   - Data landscape survey summary (what was found, what data types exist for the group)
+  - Sampling matrix: taxa × markers/data-type availability
+  - All plans proposed, with taxon count, marker count, missing data %, and trade-off reasoning
+  - Plan(s) selected by researcher and rationale
   - Search queries used for each database
-  - Data strategy decision and reasoning (why this data type was chosen)
   - Filters applied and why
   - Sequences/runs included vs. excluded with reasoning
   - Data quality notes
-  - Recommended next module: `phylo-assemble` (if raw reads) or `phylo-alignment` (if assembled sequences)
+  - Recommended next module per plan: `phylo-assemble` (raw reads) or `phylo-alignment` (assembled sequences)
+
+**Multi-plan directory convention (when researcher selects multiple plans):**
+```
+reports/
+  data-acquisition_YYYY-MM-DD.tex   ← combined accession table across all plans
+  data-acquisition_YYYY-MM-DD.md    ← survey narrative + plan comparison
+  planA/
+    assembly_YYYY-MM-DD.md
+    alignment_YYYY-MM-DD.md
+    model-selection_YYYY-MM-DD.md
+    tree-inference_YYYY-MM-DD.md
+    visualization_YYYY-MM-DD.md
+  planB/
+    alignment_YYYY-MM-DD.md
+    ...
+```
 
 ---
 
@@ -339,10 +369,10 @@ A graduate student asks: "What are the phylogenetic relationships within Zingibe
 ### Dataset strategy (determined by `phylo-data-acquisition` survey)
 - **Organism:** Zingiberaceae, family-level with genus-level resolution
 - **Taxonomic scope:** Representative species across all major genera; outgroups from Musaceae/Cannaceae
-- **Data survey outcome:** SRA contains genome skimming datasets for several genera + GenBank has assembled plastid genes and ITS for many species → combined strategy recommended
-  - SRA runs → `phylo-assemble` (GetOrganelle for plastomes, HybPiper if HybSeq data found)
-  - GenBank assembled sequences → supplement taxa missing from SRA
-- **Markers:** Full plastome (if assembly succeeds) or multi-locus plastid (*matK*, *rbcL*, *trnL-F*, *psbA-trnH*) + nuclear (ITS, nrETS) — more markers preferred
+- **Data survey outcome:** SRA contains genome skimming datasets for ~25 species across key genera; GenBank has assembled *matK*, *rbcL*, *trnL-F*, and ITS for ~90 species → two plans proposed:
+  - **Plan A (broad):** 90 taxa × 4 markers (GenBank only; any taxon with ≥2 markers included)
+  - **Plan B (marker-rich):** 25 taxa × full plastome via SRA assembly + nuclear ITS (GetOrganelle + GenBank supplement)
+  - **Researcher selects both** → parallel analyses run under `reports/planA/` and `reports/planB/`
 
 ### Pipeline walkthrough
 1. **Research design:** Literature review of Zingiberaceae systematics, landmark papers (e.g., Kress et al.), current generic concepts, known problem taxa
