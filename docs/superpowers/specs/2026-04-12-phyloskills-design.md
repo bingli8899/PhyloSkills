@@ -19,9 +19,10 @@ PhyloSkills is a hub-and-spoke skill suite that coaches an AI agent to assist a 
 
 ```
 phylogenetic-analysis (hub)
+├── phylo-environment       ← NEW: software setup and version management
 ├── phylo-research-design
 ├── phylo-data-acquisition
-├── phylo-assemble          ← NEW: assembly/extraction when raw reads available
+├── phylo-assemble
 ├── phylo-alignment
 ├── phylo-model-selection
 ├── phylo-tree-inference
@@ -55,9 +56,74 @@ Every module writes reports to `reports/` at completion (and updated continuousl
 
 ---
 
+## Cross-Cutting: Software Management
+
+Every module that invokes external software must check the software environment before proceeding and document exact versions in its report.
+
+### Executables folder convention
+- All third-party tools are installed or symlinked to `executables/` at the project root
+- Subdirectory per tool: `executables/mafft/`, `executables/iqtree/`, `executables/getorganelle/`, etc.
+- AI always resolves tool paths from `executables/` first; falls back to system PATH with a warning
+
+### Two setup modes (human chooses)
+
+**Mode 1 — Human-managed:** Researcher downloads and installs tools themselves; AI checks that each required executable exists and is callable before a module runs, and reports any missing tools with download instructions.
+
+**Mode 2 — AI-assisted:** AI helps download and install each required tool into `executables/` when first needed:
+- Identifies the correct binary/release for the researcher's OS
+- Downloads from the official source (GitHub release, Bioconda, tool homepage)
+- Verifies the download (checksum or test run)
+- Documents the source URL, version, and install date
+
+Either mode produces the same `executables/` layout and version record.
+
+### Version documentation (required in every module report)
+Every module report must include a **Software versions** table:
+
+| Tool | Version | Source | Install date |
+|------|---------|--------|-------------|
+| MAFFT | 7.520 | https://mafft.cbrc.jp | 2026-04-12 |
+| IQ-TREE | 2.3.6 | GitHub release | 2026-04-12 |
+| ... | ... | ... | ... |
+
+- Version is recorded from the tool's `--version` or `-v` output at run time, not from memory
+- If a tool is updated mid-project, the new version is recorded in the relevant module report with a note
+
+### Software inventory file
+`executables/software-inventory.md` — maintained automatically across the full pipeline:
+- Running log of all tools, versions, sources, and install dates
+- Updated each time a new tool is added or an existing one is updated
+- Serves as the reproducibility record for the entire project
+
+---
+
 ## Module Specifications
 
-### 1. `phylo-research-design`
+### 1. `phylo-environment`
+
+**Trigger:** Start of any new project OR when a module reports a missing or incompatible tool
+
+**Process:**
+1. Identify all tools required for the intended pipeline scope (determined from research design or hub routing)
+2. Check `executables/` for each required tool; attempt to call each with `--version` or equivalent
+3. Present setup status to researcher: which tools are present and verified, which are missing
+4. For missing tools, ask researcher which setup mode to use:
+   - **Mode 1 (human-managed):** Provide exact download instructions, official source URL, and install path; wait for researcher to confirm before proceeding
+   - **Mode 2 (AI-assisted):** Identify correct binary for researcher's OS, download from official source, verify with test run, install to `executables/<tool-name>/`
+5. Record every tool in `executables/software-inventory.md` — tool name, version string (from `--version` output), source URL, install date, OS/platform
+6. Re-check environment after any install; confirm all required tools are operational before handing off to the next module
+
+**QC gate:** All tools required by the planned pipeline are present, callable, and version-recorded  
+**On failure:** Report missing tool with install guidance; do not allow dependent module to proceed until resolved
+
+**Report:** `executables/software-inventory.md` (the inventory file itself serves as the living report)
+- Updated each time a tool is added or upgraded
+- Columns: tool, version, source URL, install date, platform
+- Also referenced in every downstream module report's Software versions table
+
+---
+
+### 2. `phylo-research-design`
 
 **Trigger:** Start of a new phylogenetic project or when research question is undefined
 
@@ -347,7 +413,8 @@ reports/
 5. Track overall pipeline state across the session
 
 **Decision logic:**
-- No reports exist → start at `phylo-research-design`
+- No reports exist → start at `phylo-environment`, then `phylo-research-design`
+- Environment not fully verified → `phylo-environment` before any other module
 - Research design report exists, no data report → `phylo-data-acquisition`
 - Data report exists, data type = raw reads (SRA) → `phylo-assemble`
 - Data report exists, data type = assembled sequences → `phylo-alignment`
@@ -397,6 +464,12 @@ A graduate student asks: "What are the phylogenetic relationships within Zingibe
 ```
 PhyloSkills/
 ├── README.md
+├── executables/                                     ← all third-party tools live here
+│   ├── software-inventory.md                        ← living version record
+│   ├── mafft/
+│   ├── iqtree/
+│   ├── getorganelle/
+│   └── ...
 ├── docs/
 │   └── superpowers/
 │       └── specs/
@@ -405,14 +478,19 @@ PhyloSkills/
 │   ├── research-design_YYYY-MM-DD.md
 │   ├── data-acquisition_YYYY-MM-DD.tex
 │   ├── data-acquisition_YYYY-MM-DD.md
-│   ├── assembly_YYYY-MM-DD.md
-│   ├── alignment_YYYY-MM-DD.md
-│   ├── model-selection_YYYY-MM-DD.md
-│   ├── tree-inference_YYYY-MM-DD.md
-│   ├── visualization_YYYY-MM-DD.md
+│   ├── planA/
+│   │   ├── assembly_YYYY-MM-DD.md
+│   │   ├── alignment_YYYY-MM-DD.md
+│   │   ├── model-selection_YYYY-MM-DD.md
+│   │   ├── tree-inference_YYYY-MM-DD.md
+│   │   └── visualization_YYYY-MM-DD.md
+│   ├── planB/                                       ← only if multiple plans selected
+│   │   └── ...
 │   └── debug_YYYY-MM-DD.md
 └── skills/
     ├── phylogenetic-analysis/
+    │   └── SKILL.md
+    ├── phylo-environment/
     │   └── SKILL.md
     ├── phylo-research-design/
     │   └── SKILL.md
