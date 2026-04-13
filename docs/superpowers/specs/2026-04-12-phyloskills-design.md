@@ -98,14 +98,13 @@ Every module writes reports to `reports/` at completion (and updated continuousl
    - For each taxon found, record which markers/data types are available (e.g., GenBank *matK* only, SRA genome skimming, both, none)
    - Identify coverage gaps: taxa with rich data vs. taxa with only 1–2 markers
    - Compute coverage statistics: total taxa available, per-marker taxon counts, data type breakdown
-5. **Generate sampling plans** — AI proposes 2–4 explicit plans representing different taxon/marker trade-offs, for example:
-   - **Plan A (broad taxon sampling):** maximum taxa, minimum marker requirement (e.g., 80 taxa × 3 markers — include any taxon with ≥3 markers)
-   - **Plan B (balanced):** moderate taxa, moderate markers (e.g., 50 taxa × 6 markers)
-   - **Plan C (marker-rich):** fewer taxa, maximum markers/genomic data (e.g., 20 taxa × 10+ markers or whole plastome)
-   - **Plan D (all data):** include everything available regardless of per-taxon gaps; use missing-data-tolerant analysis
-   - Plans scale to what the actual data landscape supports — AI generates realistic plans based on the survey, not hypothetical ones
-   - For each plan: list exact taxon count, marker/data-type count, estimated missing data %, and recommended downstream approach
-6. **Human selects plan(s)** — researcher chooses one plan OR multiple plans (all selected plans are downloaded and run as parallel analyses through the pipeline)
+5. **Generate sampling plans** — AI evaluates the data landscape and proposes as many plans as meaningfully distinct trade-off points exist (could be two, could be more):
+   - **Core principle: both taxon count and marker count should be maximized** — plans explore the frontier of that trade-off, not arbitrary points on it
+   - Each plan represents a distinct, defensible balance point that emerges from the actual data (e.g., a natural threshold where adding more taxa sharply drops marker coverage, or where switching data types unlocks a different set of taxa)
+   - For each plan: report taxon count, marker/data-type count, estimated missing data %, key trade-off reasoning, and recommended downstream approach
+   - AI does not pre-define plan labels or assume a fixed number of plans — the number and shape of plans is determined by what the data landscape actually supports
+   - Plans are evaluated and labeled by the AI based on their characteristics (e.g., breadth-optimized, depth-optimized, balanced, all-inclusive) — labels are descriptive, not prescriptive
+6. **Human selects plan(s)** — researcher reviews the proposed plans and chooses one or multiple; there is no constraint on how many can be selected
    - If multiple plans selected: each plan gets its own subdirectory and report series (e.g., `reports/planA/`, `reports/planB/`)
 7. **Data type decision** — applied per plan:
    - Assembled gene sequences → download FASTA from GenBank (route → `phylo-alignment`)
@@ -369,10 +368,7 @@ A graduate student asks: "What are the phylogenetic relationships within Zingibe
 ### Dataset strategy (determined by `phylo-data-acquisition` survey)
 - **Organism:** Zingiberaceae, family-level with genus-level resolution
 - **Taxonomic scope:** Representative species across all major genera; outgroups from Musaceae/Cannaceae
-- **Data survey outcome:** SRA contains genome skimming datasets for ~25 species across key genera; GenBank has assembled *matK*, *rbcL*, *trnL-F*, and ITS for ~90 species → two plans proposed:
-  - **Plan A (broad):** 90 taxa × 4 markers (GenBank only; any taxon with ≥2 markers included)
-  - **Plan B (marker-rich):** 25 taxa × full plastome via SRA assembly + nuclear ITS (GetOrganelle + GenBank supplement)
-  - **Researcher selects both** → parallel analyses run under `reports/planA/` and `reports/planB/`
+- **Data survey outcome:** SRA contains genome skimming datasets for a subset of species across key genera; GenBank has assembled plastid genes and ITS for a broader but marker-sparser set of species → AI evaluates the coverage matrix and proposes plans representing distinct trade-off points (e.g., breadth-optimized using GenBank-only data, depth-optimized using SRA-assembled plastomes for a smaller set, and potentially a combined strategy); researcher selects one or more plans → parallel analyses run under `reports/planA/`, `reports/planB/`, etc.
 
 ### Pipeline walkthrough
 1. **Research design:** Literature review of Zingiberaceae systematics, landmark papers (e.g., Kress et al.), current generic concepts, known problem taxa
