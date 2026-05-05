@@ -257,6 +257,8 @@ Flag any unexpected topology to the researcher with a specific question — do n
 
 ## Report
 
+**Mandatory:** Every log file generated during this module must be listed with its exact path in the report so the researcher can monitor background processes and audit what ran.
+
 Write to `reports/[planX/]tree-inference_YYYY-MM-DD.md`:
 
 ```markdown
@@ -304,6 +306,17 @@ Plan: [planA / planB / ...]
 ## Software Versions
 | Tool | Version | Source | Install date |
 |------|---------|--------|-------------|
+
+## Log Files Generated
+[List every log file created during this module with its exact path so the researcher
+ can monitor long-running background jobs and inspect convergence details]
+[Examples:]
+[  output/tree_inference.log           (IQ-TREE run log)]
+[  output/tree_inference.iqtree        (full IQ-TREE output with model and tree)]
+[  output/raxml_tree.raxml.log         (RAxML-NG log, if used)]
+[  output/mrbayes_run.log              (MrBayes stdout log, if used)]
+[  output/beast_run.log                (BEAST2 run log, if used)]
+[  output/aster/wastral.log            (wASTRAL/ASTRAL log, if used)]
 
 ## Next Module
 visualization

@@ -30,6 +30,7 @@
 #   -m  trimAl mode: automated1 | gappyout (default: automated1)
 #   -t  CPU threads (default: auto-detect via nproc)
 #   -c  Concatenate all trimmed/aligned markers with AMAS (flag; default: off)
+#   -A  Path to AMAS.py (default: auto-detect in PATH; use when AMAS is not in PATH)
 #   -d  Data type for AMAS: dna | aa (default: dna)
 #   -f  Input format for AMAS: fasta | phylip | nexus (default: fasta)
 #
@@ -62,6 +63,7 @@ THREADS=$(nproc 2>/dev/null || echo 4)
 CONCATENATE=false
 DATA_TYPE="dna"
 FORMAT="fasta"
+AMAS_PATH=""
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 usage() {
@@ -71,7 +73,7 @@ usage() {
 
 PROVENANCE_DIR=""
 
-while getopts "i:o:s:Tm:t:cd:f:P:h" opt; do
+while getopts "i:o:s:Tm:t:cA:d:f:P:h" opt; do
     case $opt in
         i) INDIR="$OPTARG" ;;
         o) OUTDIR="$OPTARG" ;;
@@ -80,6 +82,7 @@ while getopts "i:o:s:Tm:t:cd:f:P:h" opt; do
         m) TRIM_MODE="$OPTARG" ;;
         t) THREADS="$OPTARG" ;;
         c) CONCATENATE=true ;;
+        A) AMAS_PATH="$OPTARG" ;;
         d) DATA_TYPE="$OPTARG" ;;
         f) FORMAT="$OPTARG" ;;
         P) PROVENANCE_DIR="$OPTARG" ;;
@@ -113,8 +116,15 @@ if [[ "$TRIM" == true ]]; then
 fi
 
 if [[ "$CONCATENATE" == true ]]; then
-    command -v AMAS.py &>/dev/null || command -v amas &>/dev/null || {
-        echo "ERROR: AMAS not found. Install: pip install amas" >&2; exit 1; }
+    if [[ -n "$AMAS_PATH" ]]; then
+        # Expand ~ in path
+        AMAS_PATH="${AMAS_PATH/#\~/$HOME}"
+        [[ ! -f "$AMAS_PATH" ]] && {
+            echo "ERROR: AMAS not found at: ${AMAS_PATH}" >&2; exit 1; }
+    else
+        command -v AMAS.py &>/dev/null || command -v amas &>/dev/null || {
+            echo "ERROR: AMAS not found. Install: pip install amas  OR  use -A <path/to/AMAS.py>" >&2; exit 1; }
+    fi
 fi
 
 mkdir -p "$OUTDIR"
@@ -265,19 +275,20 @@ if [[ "$CONCATENATE" == true && "${#ALIGNED_FILES[@]}" -gt 0 ]]; then
     echo "=== Concatenating ${#ALIGNED_FILES[@]} markers with AMAS ==="
 
     AMAS_CMD=""
-    command -v AMAS.py &>/dev/null && AMAS_CMD="AMAS.py" || AMAS_CMD="amas"
+    if [[ -n "$AMAS_PATH" ]]; then
+        AMAS_CMD="python3 ${AMAS_PATH}"
+    else
+        command -v AMAS.py &>/dev/null && AMAS_CMD="AMAS.py" || AMAS_CMD="amas"
+    fi
 
     $AMAS_CMD concat \
         -i "${ALIGNED_FILES[@]}" \
         -f fasta \
         -d "$DATA_TYPE" \
-        -o "${OUTDIR}/concatenated.fasta" \
-        --part-format raxml \
-        --out-format fasta
-
-    # AMAS writes partition to partitions.txt by default; rename for clarity
-    [[ -f "${OUTDIR}/partitions.txt" ]] && \
-        mv "${OUTDIR}/partitions.txt" "${OUTDIR}/partition.txt"
+        -t "${OUTDIR}/concatenated.fasta" \
+        -p "${OUTDIR}/partition.txt" \
+        -u fasta \
+        -y raxml
 
     echo "  Supermatrix: ${OUTDIR}/concatenated.fasta"
     echo "  Partition:   ${OUTDIR}/partition.txt"

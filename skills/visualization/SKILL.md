@@ -204,6 +204,8 @@ On any failure → route to `debug`.
 
 ## Report
 
+**Mandatory:** Every log file generated during this module must be listed with its exact path in the report so the researcher can monitor background processes and audit what ran.
+
 Write to `reports/[planX/]visualization_YYYY-MM-DD.md`:
 
 ```markdown
@@ -235,6 +237,14 @@ Plan: [planA / planB / ...]
 ```
 
 Always include `sessionInfo()` output — it captures all package versions in one call.
+
+## Log Files Generated
+[List every log file created during this module with its exact path]
+[Examples:]
+[  figures/tree_figure.pdf     (exported figure)]
+[  figures/tree_figure.svg     (vector figure)]
+[  scripts/visualization_<date>.R   (R script used to produce figures)]
+[If R warnings were captured to a file, list that path here]
 
 ## Common Mistakes
 

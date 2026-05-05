@@ -17,6 +17,12 @@ Load `reports/[planX/]alignment_YYYY-MM-DD.md`. Extract:
 - Whether the analysis is unpartitioned or partitioned
 - Downstream tool (IQ-TREE, RAxML-NG, MrBayes, BEAST2) — determines output format needed
 
+### Step 1.1 — Determine if partition merging is needed 
+  This should check with the human agent before proceeding. 
+  For nuclear dataset, a partitioning analysis (for example, in IQ-TREE) is required 
+  For plastid dataset, partitioning analysis is not required because plastid markers are linked and do not represent independent loci. 
+  However, the specific decision should be made by the human agent.  
+
 ## Step 2 — Choose criterion: BIC, AIC, or AICc
 
 | Criterion | When to use |
@@ -127,6 +133,8 @@ For MrBayes or BEAST2: translate the IQ-TREE model to the tool's syntax:
 
 ## Report
 
+**Mandatory:** Every log file generated during this module must be listed with its exact path in the report so the researcher can monitor background processes and audit what ran.
+
 Write to `reports/[planX/]model-selection_YYYY-MM-DD.md`:
 
 ```markdown
@@ -158,6 +166,15 @@ Plan: [planA / planB / ...]
 ## Software Versions
 | Tool | Version | Source | Install date |
 |------|---------|--------|-------------|
+
+## Log Files Generated
+[List every log file created during this module with its exact path so the researcher
+ can monitor background model testing and review detailed fit statistics]
+[Examples:]
+[  model_test.log               (IQ-TREE run log)]
+[  model_test.iqtree            (full IQ-TREE output with selected model details)]
+[  model_test.best_model.nex    (merged partition file — input for tree inference)]
+[  modeltest_output.log         (ModelTest-NG log, if used instead)]
 
 ## Next Module
 tree-inference

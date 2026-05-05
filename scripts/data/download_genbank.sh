@@ -31,6 +31,33 @@ MAX_SEQS=500
 FORMAT="fasta"
 SURVEY_ONLY=false
 
+# ── Marker size thresholds (bp) ───────────────────────────────────────────────
+# Any downloaded FASTA longer than this limit is assumed to be a complete
+# plastome record rather than a single-gene amplicon.  The script will then
+# re-fetch the GenBank annotation and extract the gene with extract_gene_from_gb.py.
+declare -A MARKER_SIZE_MAX=(
+    [matK]=2500
+    [rbcL]=1800
+    [trnL]=2500
+    [psbA-trnH]=1000
+    [rpoB]=4000
+    [rpoC1]=2500
+    [atpB]=2000
+    [ndhF]=3000
+    [ycf1]=10000
+    [ycf2]=10000
+)
+
+# Resolve the repo root so extract_gene_from_gb.py can be found regardless of
+# the caller's working directory.
+PHYLOSKILLS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# Return the size threshold for a given marker; fall back to 5000 if unknown.
+get_marker_size_max() {
+    local m="$1"
+    echo "${MARKER_SIZE_MAX[$m]:-5000}"
+}
+
 # ── Argument parsing ──────────────────────────────────────────────────────────
 usage() {
     grep '^#' "$0" | grep -v '#!/' | sed 's/^# \{0,1\}//'
@@ -155,6 +182,34 @@ download_marker() {
         if [[ ! -s "$filename" ]]; then
             echo "  WARNING: Empty file for ${accession}, removing" >&2
             rm -f "$filename"
+            continue
+        fi
+
+        # ── Size check: reject complete plastome sequences ────────────────────
+        # "marker"[All Fields] also matches full plastome records; efetch -format
+        # fasta returns the entire sequence (~100-170 kb).  If the file exceeds
+        # the per-marker threshold, re-fetch the GenBank annotation and extract
+        # just the gene feature.
+        local file_len size_max
+        file_len=$(awk '/^>/{next}{len+=length($0)}END{print len+0}' "$filename")
+        size_max=$(get_marker_size_max "$marker")
+
+        if [[ "$file_len" -gt "$size_max" ]]; then
+            echo "  Oversized (${file_len} bp > ${size_max} bp max for ${marker}) — attempting GB extraction..."
+            local gb_file="${filename%.fasta}.gb"
+            efetch -db nuccore -id "$accession" -format gb 2>/dev/null > "$gb_file"
+            if "$HOME/miniconda3/bin/python3" \
+                    "${PHYLOSKILLS_ROOT}/scripts/data/extract_gene_from_gb.py" \
+                    --gb "$gb_file" \
+                    --gene "$marker" \
+                    --out "$filename" \
+                    --header "${genus}_${species}_${accession_clean}_${marker} source=GenBank_annotation"; then
+                echo "  Extracted ${marker} from complete plastome ${accession}"
+            else
+                echo "  WARNING: Could not extract ${marker} from ${accession} — skipping" >&2
+                rm -f "$filename"
+            fi
+            rm -f "$gb_file"
         else
             echo "  Downloaded: $(basename "$filename")"
         fi

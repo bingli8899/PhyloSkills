@@ -293,6 +293,8 @@ BiocManager::install("ggtree", force = TRUE)
 
 ## Report
 
+**Mandatory:** Every log file referenced or generated during debugging must be listed with its exact path in the report so the researcher can inspect the evidence.
+
 Write to `reports/debug_YYYY-MM-DD.md` (append if file exists — multiple debug events in one project):
 
 ```markdown
@@ -309,6 +311,7 @@ Plan: [planA / planB / ...]
 - **Outcome:** [resolved / partially resolved / escalated to researcher]
 - **Pipeline re-entry point:** [module name]
 - **Affected files:** [any files renamed, removed, or replaced]
+- **Log files referenced:** [exact paths to any log files inspected during diagnosis]
 ```
 
 Append a new Event block for each debug session — do not overwrite prior events. The full debug history is part of the project record.

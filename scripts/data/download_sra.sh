@@ -213,11 +213,19 @@ run_streaming() {
         if [[ -n "$ASSEMBLE_SCRIPT" && -x "$ASSEMBLE_SCRIPT" ]]; then
             echo "  Running assembly: ${ASSEMBLE_SCRIPT} for ${acc}"
             assembly_output=""
-            # Call assembly script; it should print output path to stdout on last line
+            assembly_exit=0
+            # Capture last stdout line (output path) and exit code separately
             assembly_output=$(bash "$ASSEMBLE_SCRIPT" "$acc" \
                 "${OUTDIR}/${acc}_1.fastq" "${OUTDIR}/${acc}_2.fastq" \
-                2>&1 | tee /dev/stderr | tail -1 || true)
-            delete_raw "$acc" "$assembly_output"
+                2>&1 | tee /dev/stderr | tail -1) || assembly_exit=$?
+            # exit 0 (complete) and exit 2 (long scaffold) → delete raw reads
+            # exit 1 (failed)                              → keep raw reads
+            if [[ "$assembly_exit" -eq 0 || "$assembly_exit" -eq 2 ]]; then
+                delete_raw "$acc" "$assembly_output"
+            else
+                echo "  Assembly failed (exit ${assembly_exit}) — raw reads retained: ${acc}" >&2
+                echo -e "${acc}\tASSEMBLY_FAILED\tno\texit code ${assembly_exit}" >> "$LOG_FILE"
+            fi
         else
             echo "  No assembly script provided; raw reads retained: ${acc}"
             echo -e "${acc}\tDOWNLOAD_ONLY\tno\tno assembly script" >> "$LOG_FILE"

@@ -47,6 +47,8 @@ Common target journals for plant phylogenetics:
 | *Molecular Phylogenetics and Evolution* | ~4.0 | Numbered | None specified |
 | *Systematic Biology* | ~14 | Numbered | Concise |
 | *PLOS ONE* | ~3.5 | Numbered | None |
+| PhytoKeys | ~1.0 | Author-year | None specified | 
+| PhytoTaxa | ~1.0 | Author-year | None specified | 
 
 Ask researcher to confirm target journal before generating output.
 
@@ -69,6 +71,7 @@ The script will:
 
 ## Step 4 — Generate figure captions
 
+This step is optional but recommended. It ensures that figure captions are consistent with the Methods section and contain all necessary details about tree inference and support values. The AI agent should ask the human researcher to see if to skip this step, but if not, run: 
 ```bash
 python scripts/manuscript/fig_caption_gen.py \
   --trees results/trees/ \
@@ -103,6 +106,8 @@ The generated Methods section is a draft, not a final product:
 
 ## Report
 
+**Mandatory:** Every log file generated during this module must be listed with its exact path in the report so the researcher can monitor background processes and audit what ran.
+
 Write to `reports/[planX/]manuscript_YYYY-MM-DD.md`:
 
 ```markdown
@@ -124,6 +129,13 @@ Journal: [target journal]
 - Trees deposited: [TreeBASE / Dryad / GitHub]
 - Analysis scripts: [GitHub repo URL]
 ```
+
+## Log Files Generated
+[List every log file created during this module with its exact path]
+[Examples:]
+[  reports/methods_draft_YYYY-MM-DD.md      (generated Methods section)]
+[  reports/figure_captions_YYYY-MM-DD.md   (generated figure captions)]
+[  scripts/manuscript/methods_gen.log       (script stdout, if redirected)]
 
 ## Common Mistakes
 

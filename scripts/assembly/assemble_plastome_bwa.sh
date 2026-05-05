@@ -154,7 +154,14 @@ echo ""
 echo "=== Generating consensus (${CONSENSUS_TYPE} mode) ==="
 
 if [[ "$CONSENSUS_TYPE" == "strict" ]]; then
-    # Call only positions with depth >= MIN_DEPTH; others become N
+    # Call only positions with depth >= MIN_DEPTH; others become N.
+    # BCFtools v1.21+: --mask-with requires --mask FILE.
+    # We generate a BED of low-coverage positions from the samtools depth output
+    # and pass it as the mask, then use --mask-with N.
+    LOW_COV_BED="${OUTDIR}/${SAMPLE}_low_cov.bed"
+    awk -v d="$MIN_DEPTH" 'BEGIN{OFS="\t"} $3<d {print $1, $2-1, $2}' \
+        "$COVERAGE" > "$LOW_COV_BED"
+
     bcftools mpileup \
         --fasta-ref "$REFERENCE" \
         --min-BQ 20 \
@@ -168,8 +175,8 @@ if [[ "$CONSENSUS_TYPE" == "strict" ]]; then
 
     bcftools consensus \
         --fasta-ref "$REFERENCE" \
+        --mask "$LOW_COV_BED" \
         --mask-with N \
-        --min-depth "$MIN_DEPTH" \
         "$PILEUP" \
         | sed "1s/>.*/>${SAMPLE}/" \
         > "$CONSENSUS"

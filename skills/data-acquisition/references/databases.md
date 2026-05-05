@@ -3,6 +3,10 @@
 Reference for the `data-acquisition` skill and `scripts/data/download_genbank.sh`.
 Describes each database, what it contains, and how to query it effectively.
 
+> **General-purpose reference — do not hard-code taxon names.**
+> All taxon names in query examples are placeholders (e.g., `"<TaxonName>"`, `"<Genus>"`).
+> Replace with the actual group name for each study. When updating this file, keep examples generic.
+
 ---
 
 ## 1. NCBI GenBank / Nucleotide

@@ -129,6 +129,7 @@ After each session, note the current pipeline state in a brief index entry appen
 - Plan B status: [last completed module]
 - Pending human actions: [BEAST2 calibration approval / none]
 - Next recommended action: [module + plan]
+- Log files active: [paths to any log files from background processes still running]
 ```
 
 This ensures both the researcher and a future AI agent instance can orient immediately at session start.
